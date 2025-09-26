@@ -362,11 +362,264 @@ export default function RecipeDetailPage({ params }: PageProps) {
 - `/recipes/123` → `params.id = "123"`
 - `/recipes/abc` → `params.id = "abc"`
 
+## SOLID 원칙을 적용한 React 컴포넌트 설계
+
+### SOLID 원칙과 React 컴포넌트
+
+#### 1. **S**RP (Single Responsibility Principle) - 단일 책임 원칙
+```typescript
+// ❌ 나쁜 예시 - 하나의 컴포넌트가 너무 많은 책임을 가짐
+function UserProfilePage() {
+  // 사용자 데이터 관리
+  // API 호출
+  // UI 렌더링
+  // 폼 검증
+  // 상태 관리
+  return (/* 복잡한 JSX */);
+}
+
+// ✅ 좋은 예시 - 각 컴포넌트가 하나의 책임만 가짐
+function UserProfile({ user }) { /* 사용자 정보 표시만 담당 */ }
+function UserForm({ onSubmit }) { /* 폼 처리만 담당 */ }
+function UserAvatar({ src, alt }) { /* 아바타 표시만 담당 */ }
+```
+
+#### 2. **O**CP (Open/Closed Principle) - 개방/폐쇄 원칙
+```typescript
+// ✅ 확장에는 열려있고 수정에는 닫혀있는 컴포넌트
+interface ButtonProps {
+  variant?: 'primary' | 'secondary' | 'danger';
+  size?: 'sm' | 'md' | 'lg';
+  children: React.ReactNode;
+}
+
+function Button({ variant = 'primary', size = 'md', children, ...props }: ButtonProps) {
+  return (
+    <button className={cn(baseStyles, variantStyles[variant], sizeStyles[size])} {...props}>
+      {children}
+    </button>
+  );
+}
+```
+
+#### 3. **L**SP (Liskov Substitution Principle) - 리스코프 치환 원칙
+```typescript
+// ✅ 부모 컴포넌트를 자식 컴포넌트로 치환해도 동작해야 함
+interface CardProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+function Card({ children, className }: CardProps) {
+  return <div className={cn('card', className)}>{children}</div>;
+}
+
+function ClickableCard({ children, className, onClick }: CardProps & { onClick: () => void }) {
+  return <div className={cn('card', className)} onClick={onClick}>{children}</div>;
+}
+```
+
+#### 4. **I**SP (Interface Segregation Principle) - 인터페이스 분리 원칙
+```typescript
+// ❌ 나쁜 예시 - 너무 많은 props를 가진 인터페이스
+interface MegaComponentProps {
+  title: string;
+  description: string;
+  onSave: () => void;
+  onDelete: () => void;
+  onEdit: () => void;
+  isLoading: boolean;
+  error: string;
+  // ... 너무 많은 props
+}
+
+// ✅ 좋은 예시 - 목적에 맞게 분리된 인터페이스
+interface ContentProps {
+  title: string;
+  description: string;
+}
+
+interface ActionsProps {
+  onSave: () => void;
+  onDelete: () => void;
+  onEdit: () => void;
+}
+
+interface StatusProps {
+  isLoading: boolean;
+  error?: string;
+}
+```
+
+#### 5. **D**IP (Dependency Inversion Principle) - 의존성 역전 원칙
+```typescript
+// ✅ 구체적인 구현이 아닌 추상화에 의존
+interface DataService {
+  fetchUser(id: string): Promise<User>;
+}
+
+function UserProfile({ userId, dataService }: { userId: string; dataService: DataService }) {
+  // dataService는 추상화(인터페이스)에 의존
+  const [user, setUser] = useState<User>();
+
+  useEffect(() => {
+    dataService.fetchUser(userId).then(setUser);
+  }, [userId, dataService]);
+
+  return <div>{user?.name}</div>;
+}
+```
+
+### 컴포넌트 분리 전략
+
+#### 1. 페이지 레벨 분리
+```
+src/
+├── components/
+│   ├── ui/              # 재사용 가능한 기본 컴포넌트
+│   ├── forms/           # 폼 관련 컴포넌트
+│   ├── cards/           # 카드 관련 컴포넌트
+│   └── sections/        # 페이지 섹션 컴포넌트
+├── hooks/               # 커스텀 훅
+├── types/               # 타입 정의
+└── utils/               # 유틸리티 함수
+```
+
+#### 2. 관심사 분리
+- **Presentation Components**: UI만 담당
+- **Container Components**: 로직과 상태 관리
+- **Custom Hooks**: 재사용 가능한 로직
+- **Types**: 타입 정의 분리
+- **Utils**: 순수 함수들
+
+### 랜딩 페이지 리팩토링 실습
+
+#### Before (기존) - 단일 책임 원칙 위반 ❌
+```typescript
+// page.tsx - 모든 것을 한 파일에서 처리
+export default function Home() {
+  return (
+    <div>
+      {/* Hero 섹션 - 150줄 */}
+      <section>...</section>
+
+      {/* Features 섹션 - 80줄 */}
+      <section>...</section>
+
+      {/* CTA 섹션 - 50줄 */}
+      <section>...</section>
+    </div>
+  );
+}
+```
+
+#### After (리팩토링 후) - SOLID 원칙 적용 ✅
+
+**1. HeroSection - 단일 책임 원칙**
+```typescript
+// HeroSection.tsx - 히어로 섹션만 담당
+export function HeroSection() {
+  // 책임: 메인 타이틀, 부제목, 주요 버튼 표시
+  return (
+    <section className="container mx-auto px-4 pt-20 pb-16 text-center">
+      <h1>AI가 추천하는 맞춤 레시피</h1>
+      <p>냉장고 속 재료만 알려주세요...</p>
+      <div>
+        <Button>AI 레시피 받기</Button>
+        <Button>레시피 둘러보기</Button>
+      </div>
+    </section>
+  );
+}
+```
+
+**2. FeaturesSection - 개방/폐쇄 원칙**
+```typescript
+// FeaturesSection.tsx - 기능 소개만 담당
+const features: FeatureCard[] = [
+  { emoji: "🥗", title: "스마트 재료 분석", description: "..." },
+  { emoji: "👨‍🍳", title: "커뮤니티 중심", description: "..." },
+  { emoji: "📊", title: "영양 분석", description: "..." }
+];
+
+export function FeaturesSection() {
+  // 책임: 기능 카드들을 그리드로 표시
+  // 확장성: features 배열에 항목 추가만으로 새 기능 추가 가능
+  return (
+    <section>
+      {features.map((feature, index) => (
+        <Card key={index}>...</Card>
+      ))}
+    </section>
+  );
+}
+```
+
+**3. CTASection - 인터페이스 분리 원칙**
+```typescript
+// CTASection.tsx - CTA만 담당
+interface CTASection {
+  title: string;
+  description: string;
+  buttonText: string;
+  buttonHref: string;
+}
+
+export function CTASection() {
+  // 책임: 사용자 액션 유도
+  // 분리된 타입으로 props 명확히 정의
+  return (
+    <section>
+      <Card className="bg-primary">
+        <CardTitle>{ctaData.title}</CardTitle>
+        <CardDescription>{ctaData.description}</CardDescription>
+        <Button>{ctaData.buttonText}</Button>
+      </Card>
+    </section>
+  );
+}
+```
+
+**4. 메인 페이지 - 컴포지션 패턴**
+```typescript
+// page.tsx - 섹션 조합만 담당
+export default function Home() {
+  return (
+    <div>
+      <HeroSection />      {/* 히어로 영역 */}
+      <FeaturesSection />  {/* 기능 소개 영역 */}
+      <CTASection />       {/* 액션 유도 영역 */}
+    </div>
+  );
+}
+```
+
+#### 리팩토링의 이점
+
+**1. 가독성 향상**
+- 각 섹션의 역할이 명확
+- 코드 이해하기 쉬워짐
+
+**2. 유지보수성**
+- 기능별로 파일 분리
+- 특정 섹션 수정 시 해당 파일만 건드리면 됨
+
+**3. 재사용성**
+- HeroSection을 다른 페이지에서도 사용 가능
+- FeaturesSection의 features 배열은 쉽게 확장 가능
+
+**4. 테스트 용이성**
+- 각 컴포넌트를 독립적으로 테스트 가능
+
+**5. 협업 효율성**
+- 다른 개발자가 특정 섹션만 담당하여 작업 가능
+
 ## 다음 학습 목표
 
 - [x] 클라이언트 컴포넌트 vs 서버 컴포넌트 ✅
 - [x] 하이드레이션 개념 ✅
 - [x] 페이지 라우팅 추가 (recipes, recommend 등) ✅
 - [x] 동적 라우팅 ([id] 폴더 구조) ✅
+- [ ] SOLID 원칙 기반 컴포넌트 리팩토링 🔄
 - [ ] API 연동 (fetch, axios)
 - [ ] 사용자 인증 시스템

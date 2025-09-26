@@ -32,10 +32,14 @@ export function Header() {
         </nav>
 
         <div className="flex items-center space-x-2">
-          <Button variant="ghost" size="sm">
-            로그인
-          </Button>
-          <Button size="sm">회원가입</Button>
+          <Link href="/auth">
+            <Button variant="ghost" size="sm">
+              로그인
+            </Button>
+          </Link>
+          <Link href="/auth">
+            <Button size="sm">회원가입</Button>
+          </Link>
         </div>
       </div>
     </header>
