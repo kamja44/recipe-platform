@@ -5,12 +5,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
 import { IngredientsInputProps } from "@/types/common";
 import { IngredientInputField } from "./IngredientInputField";
 import { IngredientsList } from "./IngredientsList";
+import { RecommendButton } from "./RecommendButton";
 
 export function IngredientsInput({
   ingredients,
@@ -40,15 +38,20 @@ export function IngredientsInput({
           ingredients={ingredients}
           onRemove={onRemoveIngredient}
         />
+        <RecommendButton
+          onClick={onGetRecommendations}
+          disabled={ingredients.length === 0 || isLoading}
+          isLoading={isLoading}
+        />
 
-        <Button
+        {/* <Button
           onClick={onGetRecommendations}
           disabled={ingredients.length === 0 || isLoading}
           className="w-full"
           size="lg"
         >
           {isLoading ? "AI가 레시피를 찾고 있어요..." : "🔍 레시피 추천받기"}
-        </Button>
+        </Button> */}
       </CardContent>
     </Card>
   );
