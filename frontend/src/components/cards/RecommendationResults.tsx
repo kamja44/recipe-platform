@@ -5,10 +5,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Clock, Users, ChefHat } from "lucide-react";
+import { ChefHat } from "lucide-react";
 import { RecommendationResultsProps } from "@/types/common";
 import { EmptyState } from "../common/EmptyState";
+import { LoadingState } from "../common/LoadingState";
+import { RecipeList } from "./RecipeList";
 
 export function RecommendationResults({
   recipes,
@@ -42,39 +43,11 @@ export function RecommendationResults({
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p>AI가 최적의 레시피를 찾고 있어요...</p>
-          </div>
+          <LoadingState message="AI가 최적의 레시피를 찾고 있어요...">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
+          </LoadingState>
         ) : (
-          <div className="space-y-4">
-            {recipes.map((recipe) => (
-              <Card
-                key={recipe.id}
-                className="border-2 hover:border-primary/50 transition-colors"
-              >
-                <CardContent className="p-4">
-                  <h3 className="font-semibold text-lg mb-2">{recipe.title}</h3>
-                  <p className="text-muted-foreground text-sm mb-3">
-                    {recipe.description}
-                  </p>
-                  <div className="flex gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      {recipe.cookTime}분
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Users className="h-4 w-4" />
-                      {recipe.servings}인분
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      {recipe.difficulty}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <RecipeList recipes={recipes} />
         )}
       </CardContent>
     </Card>
