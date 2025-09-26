@@ -54,6 +54,23 @@ cd frontend
 npx shadcn@latest add [component-name]
 ```
 
+### shadcn/ui 컴포넌트 단계별 설치 가이드
+**⚠️ 주의: 반드시 frontend 폴더에서 실행**
+
+```bash
+# 1단계: 기본 필수 컴포넌트 (현재 단계)
+npx shadcn@latest add badge input textarea select label
+
+# 2단계: 폼 관련 (향후 필요시)
+npx shadcn@latest add checkbox radio-group switch form
+
+# 3단계: 레이아웃 관련 (향후 필요시)
+npx shadcn@latest add separator sheet dialog tabs
+
+# 4단계: 피드백 관련 (향후 필요시)
+npx shadcn@latest add alert-dialog toast progress skeleton
+```
+
 ### 빌드 및 배포
 - Frontend 빌드: `cd frontend && npm run build`
 - Main 서비스 빌드: `cd main-service && npm run build`
