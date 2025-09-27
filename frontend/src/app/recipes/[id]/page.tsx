@@ -10,6 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Clock, Users, ChefHat, ArrowLeft, Heart, Share2 } from "lucide-react";
 import Link from "next/link";
 import { RecipeHeader } from "@/components/recipe/RecipeHeader";
+import { RecipeIngredients } from "@/components/recipe/RecipeIngredients";
+import { RecipeNutrition } from "@/components/recipe/RecipeNutrition";
+import { RecipeInstructions } from "@/components/recipe/RecipeInstructions";
+import { RecipeTips } from "@/components/recipe/RecipeTips";
 
 // 임시 더미 데이터 (실제로는 DB에서 가져올 예정)
 const getRecipeById = (id: string) => {
@@ -130,99 +134,23 @@ export default function RecipeDetailPage({ params }: RecipeDetailPageProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* 재료 */}
         <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle>📦 재료 ({recipe.servings}인분 기준)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                {recipe.ingredients.map((ingredient, index) => (
-                  <li key={index} className="flex items-center">
-                    <span className="w-2 h-2 bg-primary rounded-full mr-3"></span>
-                    {ingredient}
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
+          <RecipeIngredients
+            ingredients={recipe.ingredients}
+            servings={recipe.servings}
+          />
 
           {/* 영양 정보 */}
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>🍎 영양 정보 (1인분 기준)</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary">
-                  {recipe.nutrition.calories}
-                </div>
-                <div className="text-sm text-muted-foreground">칼로리</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary">
-                  {recipe.nutrition.protein}g
-                </div>
-                <div className="text-sm text-muted-foreground">단백질</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary">
-                  {recipe.nutrition.carbs}g
-                </div>
-                <div className="text-sm text-muted-foreground">탄수화물</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary">
-                  {recipe.nutrition.fat}g
-                </div>
-                <div className="text-sm text-muted-foreground">지방</div>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="mt-6">
+            <RecipeNutrition nutrition={recipe.nutrition} />
+          </div>
         </div>
 
         {/* 조리법 & 팁 */}
         <div className="lg:col-span-2 space-y-6">
           {/* 조리 순서 */}
-          <Card>
-            <CardHeader>
-              <CardTitle>👨‍🍳 조리 순서</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ol className="space-y-4">
-                {recipe.instructions.map((instruction, index) => (
-                  <li key={index} className="flex gap-4">
-                    <div
-                      className="flex-shrink-0 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center
-  justify-center text-sm font-bold"
-                    >
-                      {index + 1}
-                    </div>
-                    <p className="pt-1">{instruction}</p>
-                  </li>
-                ))}
-              </ol>
-            </CardContent>
-          </Card>
-
+          <RecipeInstructions instructions={recipe.instructions} />
           {/* 요리 팁 */}
-          <Card>
-            <CardHeader>
-              <CardTitle>💡 요리 팁</CardTitle>
-              <CardDescription>
-                더 맛있게 만드는 비법을 알려드려요
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-3">
-                {recipe.tips.map((tip, index) => (
-                  <li key={index} className="flex gap-3">
-                    <ChefHat className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                    <span>{tip}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
+          <RecipeTips tips={recipe.tips} />
         </div>
       </div>
     </div>
