@@ -137,16 +137,20 @@ project/                        # 모노레포 루트
 ✅ shadcn/ui 디자인 시스템 구성
 ✅ Docker Compose 설정
 
-### Frontend 개발 완료 현황 (2024-09-26)
+### Frontend 개발 완료 현황 (2024-09-28)
 ✅ **기본 페이지 구조 완성**
 - 홈페이지 (Hero, Features, CTA 섹션)
 - AI 레시피 추천 페이지 (/recommend)
 - 레시피 상세 페이지 (/recipes/[id])
+- 레시피 목록 페이지 (/recipes)
+- 인증 페이지 (/auth)
 
 ✅ **SOLID 원칙 기반 컴포넌트 리팩토링 완료**
 - **RecommendationResults 분리**: EmptyState, LoadingState, RecipeList
 - **IngredientsInput 분리**: IngredientInputField, IngredientsList, RecommendButton
-- **RecipeDetailPage 분리 진행중**: RecipeHeader, RecipeIngredients 완료
+- **RecipeDetailPage 완전 분리**: RecipeHeader, RecipeIngredients, RecipeNutrition, RecipeInstructions, RecipeTips
+- **RecipesPage 완전 분리**: PageTitleSection, RecipeGrid, EmptyState 재활용
+- **AuthPage 부분 분리**: AuthHeader, PasswordField
 - **공통 컴포넌트**: EmptyState, LoadingState (children 패턴 적용)
 - **UX 개선**: Enter 키로 재료 추가 기능
 
@@ -156,6 +160,9 @@ project/                        # 모노레포 루트
 - Props 최적화: 전체 객체 대신 필요한 데이터만 전달
 - 불필요한 의존성 제거 및 코드 라인 수 30% 감소
 - 현재 코드 기준 리팩토링 (미래 확장성 고려 제외)
+- **컴포넌트 독립 상태 관리**: useState로 캡슐화된 상태
+- **중복 코드 제거**: 공통 컴포넌트 재활용
+- **외부 spacing 분리**: margin은 부모에서 관리
 
 ### 리팩토링 원칙 및 가이드라인
 ⚠️ **중요 원칙**
@@ -163,6 +170,22 @@ project/                        # 모노레포 루트
 - **SOLID 원칙 준수**: 특히 SRP(단일 책임 원칙)를 우선적으로 적용하여 컴포넌트 분리
 - **과도한 추상화 금지**: 현재 필요하지 않은 추상화나 복잡한 패턴은 피하고 간단명료하게 구현
 - **실용적 접근**: 학습 목적에 맞는 적절한 수준의 리팩토링 진행
+
+### 컴포넌트 설계 원칙 (2024-09-28 학습)
+⚠️ **Spacing 관리 원칙**
+- **margin**: 외부 spacing → 부모 컴포넌트가 관리
+- **padding**: 내부 spacing → 컴포넌트 자체가 관리
+- **CSS-in-JS 커뮤니티 합의**: "Never apply external spacing inside a component"
+
+⚠️ **상태 관리 원칙**
+- **컴포넌트 독립성**: 각 컴포넌트 인스턴스는 독립적인 상태를 가짐
+- **useState 격리**: 동일한 컴포넌트를 여러 번 사용해도 상태는 분리됨
+- **캡슐화**: 컴포넌트 내부에서만 필요한 상태는 내부에서 관리
+
+⚠️ **재사용성 원칙**
+- **기존 컴포넌트 재활용**: 새로 만들기 전에 기존 공통 컴포넌트 활용 검토
+- **Props 최적화**: 전체 객체보다는 필요한 데이터만 전달
+- **타입 활용**: 기존 정의된 타입 인터페이스 재사용 (예: RecipeListItem)
 
 ### 향후 구현 예정
 🔄 **컴퓨터 비전 레시피 추출**
@@ -181,12 +204,11 @@ project/                        # 모노레포 루트
 - 라우팅 구조 계획
 
 **2단계: 핵심 페이지 개발** 🎯
-- ✅ 랜딩 페이지 완료
-- ✅ 재료 입력 → AI 추천 페이지 완료 (리팩토링 완료)
-- 🔄 레시피 상세 페이지 (구현 완료, 리팩토링 진행 중)
-  - ✅ RecipeHeader 컴포넌트 분리 완료
-  - ✅ RecipeIngredients 컴포넌트 분리 완료
-  - 🔄 RecipeNutrition, RecipeInstructions, RecipeTips 분리 예정
+- ✅ 랜딩 페이지 완료 (HeroSection, FeaturesSection, CTASection)
+- ✅ 재료 입력 → AI 추천 페이지 완료 (IngredientsInput, RecommendationResults)
+- ✅ 레시피 상세 페이지 완료 (RecipeHeader, RecipeIngredients, RecipeNutrition, RecipeInstructions, RecipeTips)
+- ✅ 레시피 목록 페이지 완료 (PageTitleSection, RecipeGrid, EmptyState)
+- 🔄 인증 페이지 (AuthHeader, PasswordField 완료 / LoginForm, SignupForm 예정)
 
 **3단계: 사용자 기능** 👤
 - 로그인/회원가입 페이지

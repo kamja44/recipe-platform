@@ -357,6 +357,155 @@ export default function RecipeDetailPage({ params }: PageProps) {
 }
 ```
 
+---
+
+## 📝 React 컴포넌트 분리 및 상태 관리 학습 (2024-09-28)
+
+### 🎯 **컴포넌트 Spacing 관리의 공식 디자인 원칙**
+
+#### **핵심 개념**
+**컴포넌트는 자신의 외부 spacing을 관리하지 않는다**
+
+#### **CSS/React 디자인 시스템 공식 원칙들**
+1. **Separation of Concerns** (관심사 분리)
+   - **컴포넌트**: 내부 로직 + 내부 스타일링 담당
+   - **부모**: 레이아웃 + 포지셔닝 담당
+
+2. **CSS Box Model 원칙**
+   - `margin`: 외부 spacing → **부모가 관리**
+   - `padding`: 내부 spacing → **컴포넌트가 관리**
+
+3. **Design System 베스트 프랙티스**
+   - **Material Design**: "컴포넌트는 자체 경계선까지만 책임"
+   - **Atomic Design**: "원자 단위는 독립적이어야 함"
+   - **shadcn/ui**: 실제로 이 원칙을 따름
+
+4. **실제 라이브러리 예시**
+   ```tsx
+   // Material-UI, Ant Design, shadcn/ui 모두 동일
+   <Button>클릭</Button>  // margin 없음
+   <Card>내용</Card>      // margin 없음
+   ```
+
+5. **CSS-in-JS 커뮤니티 합의**
+   > **"Never apply external spacing inside a component"**
+
+#### **실제 적용 예시**
+```tsx
+// ❌ 잘못된 방식 (컴포넌트 내부에서 외부 spacing 관리)
+export function RecipeNutrition({ nutrition }) {
+  return (
+    <Card className="mt-6">  {/* ← 문제: 항상 위쪽에 margin */}
+      <CardHeader>
+        <CardTitle>🍎 영양 정보</CardTitle>
+      </CardHeader>
+    </Card>
+  );
+}
+
+// ✅ 올바른 방식 (부모에서 외부 spacing 관리)
+export function RecipeNutrition({ nutrition }) {
+  return (
+    <Card>  {/* ← spacing 없음, 재사용 가능 */}
+      <CardHeader>
+        <CardTitle>🍎 영양 정보</CardTitle>
+      </CardHeader>
+    </Card>
+  );
+}
+
+// 부모 컴포넌트에서 사용
+<div className="lg:col-span-1">
+  <RecipeIngredients ... />
+
+  <div className="mt-6">  {/* ← 부모가 spacing 책임 */}
+    <RecipeNutrition nutrition={recipe.nutrition} />
+  </div>
+</div>
+```
+
+#### **왜 이렇게 해야 할까?**
+1. **재사용성**: 다른 곳에서 사용할 때 불필요한 margin이 없음
+2. **단일 책임**: 컴포넌트는 자신의 내용만 담당
+3. **유연성**: 부모가 상황에 맞게 spacing 조정 가능
+
+---
+
+### 🧠 **React 컴포넌트 독립성 원리**
+
+#### **1. 컴포넌트 인스턴스 생성**
+- **같은 컴포넌트 함수여도 사용할 때마다 새로운 인스턴스 생성**
+- **각 인스턴스는 독립적인 메모리 공간과 상태를 가짐**
+
+#### **2. useState Hook의 격리**
+```tsx
+function PasswordField() {
+  const [showPassword, setShowPassword] = useState(false);
+  // ↑ 각 인스턴스마다 독립적인 상태
+}
+
+// 사용 시
+<PasswordField id="password1" />      // 독립 상태 #1
+<PasswordField id="password2" />      // 독립 상태 #2
+<PasswordField id="password3" />      // 독립 상태 #3
+```
+
+#### **3. 메모리 구조**
+```
+┌─────────────────┬─────────────────┬─────────────────┐
+│   인스턴스 #1   │   인스턴스 #2   │   인스턴스 #3   │
+│ showPassword:   │ showPassword:   │ showPassword:   │
+│     false       │     false       │     false       │
+│ (독립적 상태)   │ (독립적 상태)   │ (독립적 상태)   │
+└─────────────────┴─────────────────┴─────────────────┘
+```
+
+#### **4. React 내부 동작**
+- **Virtual DOM에서 각 컴포넌트를 고유 key로 추적**
+- **useState는 컴포넌트 인스턴스별로 격리된 상태 관리**
+- **props로 구분되는 각자의 고유 식별자**
+
+#### **실제 예시: 회원가입 폼의 2개 PasswordField**
+```tsx
+{/* 비밀번호 */}
+<PasswordField
+  id="signup-password"
+  label="비밀번호"
+  placeholder="8자 이상 입력하세요"
+  required
+/>
+
+{/* 비밀번호 확인 */}
+<PasswordField
+  id="confirm-password"
+  label="비밀번호 확인"
+  placeholder="비밀번호를 다시 입력하세요"
+  required
+/>
+```
+
+**결과:**
+- 비밀번호 필드: 자신만의 표시/숨기기 상태
+- 비밀번호 확인 필드: 자신만의 표시/숨기기 상태
+- 완전 독립적: 하나를 표시해도 다른 하나는 영향 없음
+
+#### **핵심 포인트**
+> **"코드는 하나지만 실행되는 인스턴스는 여러 개!"**
+
+---
+
+### 💡 **리팩토링 학습 요점**
+
+1. **SOLID 원칙 적용**: 특히 SRP(단일 책임 원칙)
+2. **현재 코드 기준 리팩토링**: 미래 확장성 고려 제외
+3. **기존 컴포넌트 재활용**: 중복 제거 우선
+4. **독립적 상태 관리**: 컴포넌트 내부에서 상태 캡슐화
+
+#### **완료된 리팩토링 성과**
+- **레시피 상세 페이지**: 231줄 → 158줄 (31% 감소)
+- **레시피 목록 페이지**: 99줄 → 66줄 (33% 감소)
+- **인증 페이지**: PasswordField 중복 제거로 코드 간소화
+
 ### 라우팅 예시
 - `/recipes/1` → `params.id = "1"`
 - `/recipes/123` → `params.id = "123"`
