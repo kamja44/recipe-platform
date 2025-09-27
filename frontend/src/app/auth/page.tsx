@@ -6,12 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
+import { Mail, User } from "lucide-react";
 import Link from "next/link";
+import { AuthHeader } from "@/components/auth/AuthHeader";
+import { PasswordField } from "@/components/auth/PasswordField";
 
 export default function AuthPage() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -37,16 +37,10 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20 px-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center space-x-2 mb-6">
-            <span className="text-3xl">🍳</span>
-            <span className="text-2xl font-bold">AI Recipe</span>
-          </Link>
-          <h1 className="text-2xl font-bold">요리의 새로운 시작</h1>
-          <p className="text-muted-foreground">
-            AI와 함께하는 맞춤 레시피 여행
-          </p>
-        </div>
+        <AuthHeader
+          title="요리의 새로운 시작"
+          description="AI와 함께하는 맞춤 레시피 여행"
+        />
 
         <Card>
           <Tabs defaultValue="login" className="w-full">
@@ -75,30 +69,12 @@ export default function AuthPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="password">비밀번호</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="비밀번호를 입력하세요"
-                        className="pl-10 pr-10"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
+                  <PasswordField
+                    id="password"
+                    label="비밀번호"
+                    placeholder="비밀번호를 입력하세요"
+                    required
+                  />
 
                   <div className="flex items-center justify-between text-sm">
                     <label className="flex items-center space-x-2">
@@ -159,7 +135,6 @@ export default function AuthPage() {
                       />
                     </div>
                   </div>
-
                   <div className="space-y-2">
                     <Label htmlFor="signup-email">이메일</Label>
                     <div className="relative">
@@ -174,58 +149,19 @@ export default function AuthPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">비밀번호</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signup-password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="8자 이상 입력하세요"
-                        className="pl-10 pr-10"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
+                  <PasswordField
+                    id="signup-password"
+                    label="비밀번호"
+                    placeholder="8자 이상 입력하세요"
+                    required
+                  />
 
-                  <div className="space-y-2">
-                    <Label htmlFor="confirm-password">비밀번호 확인</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="confirm-password"
-                        type={showConfirmPassword ? "text" : "password"}
-                        placeholder="비밀번호를 다시 입력하세요"
-                        className="pl-10 pr-10"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setShowConfirmPassword(!showConfirmPassword)
-                        }
-                        className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
-                      >
-                        {showConfirmPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
+                  <PasswordField
+                    id="confirm-password"
+                    label="비밀번호 확인"
+                    placeholder="비밀번호를 다시 입력하세요"
+                    required
+                  />
                   <div className="flex items-center space-x-2 text-sm">
                     <input type="checkbox" className="rounded" required />
                     <span>
@@ -245,7 +181,6 @@ export default function AuthPage() {
                       에 동의합니다.
                     </span>
                   </div>
-
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? "가입 중..." : "회원가입"}
                   </Button>
