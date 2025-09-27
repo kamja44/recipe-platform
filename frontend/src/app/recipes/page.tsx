@@ -1,13 +1,7 @@
-import Link from "next/link";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Clock, Users, ChefHat } from "lucide-react";
+import { ChefHat } from "lucide-react";
+import { PageTitleSection } from "@/components/sections/PageTitleSection";
+import { RecipeGrid } from "@/components/recipe/RecipeGrid";
+import { EmptyState } from "@/components/common/EmptyState";
 
 // 임시 더미 데이터
 const recipes = [
@@ -46,52 +40,18 @@ const recipes = [
 export default function RecipesPage() {
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold mb-4">📖 레시피 모음</h1>
-        <p className="text-lg text-muted-foreground">
-          다양한 요리 레시피를 둘러보고 새로운 요리에 도전해보세요
-        </p>
-      </div>
+      <PageTitleSection
+        title="📖 레시피 모음"
+        description="다양한 요리 레시피를 둘러보고 새로운 요리에 도전해보세요"
+      />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {recipes.map((recipe) => (
-          <Link key={recipe.id} href={`/recipes/${recipe.id}`}>
-            <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
-              <CardHeader>
-                <div className="text-6xl text-center mb-4">{recipe.image}</div>
-                <CardTitle className="text-xl">{recipe.title}</CardTitle>
-                <CardDescription>{recipe.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
-                    {recipe.cookTime}분
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Users className="h-4 w-4" />
-                    {recipe.servings}인분
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Badge variant="secondary">{recipe.category}</Badge>
-                  <Badge variant="outline">{recipe.difficulty}</Badge>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
+      <RecipeGrid recipes={recipes} />
 
       {/* 빈 상태 */}
       {recipes.length === 0 && (
-        <div className="text-center py-16">
-          <ChefHat className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-          <h3 className="text-xl font-semibold mb-2">아직 레시피가 없습니다</h3>
-          <p className="text-muted-foreground">
-            곧 다양한 레시피를 준비해드릴게요!
-          </p>
-        </div>
+        <EmptyState message="아직 레시피가 없습니다. 곧 다양한 레시피를 준비해드릴게요!">
+          <ChefHat />
+        </EmptyState>
       )}
     </div>
   );
