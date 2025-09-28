@@ -137,6 +137,105 @@ project/                        # 모노레포 루트
 ✅ shadcn/ui 디자인 시스템 구성
 ✅ Docker Compose 설정
 
+### Backend 개발 진행 현황 (2024-09-28)
+✅ **NestJS 메인 서비스 기본 설정 완료**
+- 필수 패키지 설치: TypeORM, PostgreSQL, class-validator, @nestjs/config, @nestjs/swagger
+- 모듈 폴더 구조 생성: auth, users, recipes, reviews, common, config, database
+- 환경 설정 파일 구성: main-service/.env, ai-service/.env
+
+✅ **데이터베이스 연동 및 Entity 설계 완료**
+- PostgreSQL 연동 설정 (`src/config/database.config.ts`)
+- TypeORM 설정 및 AppModule 구성
+- User Entity 생성: 인증, 프로필 관리 기능
+- Recipe Entity 생성: 레시피 정보, 재료, 조리법, 영양 정보
+- 1:N 관계 설정: User ↔ Recipe (한 사용자가 여러 레시피 소유)
+
+✅ **TypeORM 학습 및 문서화**
+- Entity 어노테이션 및 데이터베이스 관계 설정 학습
+- 관계형 매핑 (@OneToMany, @ManyToOne, @JoinColumn) 상세 분석
+- TIL.md에 TypeORM 개념 및 실습 내용 체계적 정리
+
+✅ **Entity 설정 및 DTO 구현 완료**
+- Entity를 AppModule에 추가하여 TypeORM 설정 완료
+- 레시피 폴더 구조 정리 (중복 recipes 폴더 제거)
+- CreateRecipeDto 구현: class-validator + Swagger 어노테이션
+- UpdateRecipeDto 구현: PartialType 활용한 부분 업데이트 지원
+
+✅ **NestJS 아키텍처 학습 및 문서화**
+- CRUD API 구현 아키텍처 (DTO → Service → Controller → Module) 완전 이해
+- class-validator 검증 어노테이션 상세 분석
+- @nestjs/swagger API 문서화 자동 생성 원리
+- PartialType vs TypeScript Partial<T> 비교 분석
+
+✅ **RecipesService 비즈니스 로직 구현 완료**
+- 완전한 CRUD 기능 구현 (create, findAll, findOne, update, remove)
+- 비즈니스 규칙 검증 (재료 2개 이상, 조리순서 3단계 이상)
+- 페이지네이션 지원 및 관계 데이터 로딩 (User 정보 포함)
+- NestJS 표준 예외 처리 (NotFoundException, BadRequestException)
+- 고급 검색 기능 (카테고리별, 재료별 검색)
+- QueryBuilder 활용한 복잡한 검색 쿼리 구현
+- Repository 패턴을 통한 타입 안전성 보장
+
+✅ **Service 계층 설계 패턴 학습 및 문서화**
+- 비즈니스 로직과 데이터 접근 계층 분리
+- 단일 책임 원칙 (SRP) 적용한 Service 설계
+- 부분 업데이트 로직 구현 (spread operator 활용)
+- Repository vs 직접 SQL 비교 분석
+- TIL.md에 Service 계층 핵심 개념 체계적 정리
+
+✅ **RecipesController HTTP 인터페이스 구현 완료**
+- 완전한 REST API 엔드포인트 구현 (CRUD + 검색 기능)
+- HTTP 메서드 매핑 및 적절한 상태 코드 설정
+- Swagger API 문서화 (ApiOperation, ApiResponse, ApiParam)
+- 매개변수 추출 및 변환 (ParseIntPipe, @Body(), @Param(), @Query())
+- 고급 라우팅 패턴 (카테고리별 조회, 재료 검색)
+- 얇은 계층 원칙 준수 (비즈니스 로직은 Service에 위임)
+
+✅ **Controller 계층 설계 패턴 학습 및 문서화**
+- REST API 설계 원칙 (명사형 URL, HTTP 메서드 활용)
+- 라우팅 우선순위 관리 (구체적 경로 → 동적 경로)
+- Pipe 활용한 데이터 변환 및 검증 메커니즘
+- Controller와 Service 계층 분리의 중요성
+- TIL.md에 Controller 계층 핵심 개념 체계적 정리
+
+✅ **RecipesModule 의존성 주입 설정 완료**
+- TypeORM Repository 등록 및 의존성 주입 구성
+- Service, Controller, Repository 간 완전한 연결
+- AppModule과 통합하여 전체 애플리케이션 구성 완료
+- 모듈 간 통신 및 exports 설정으로 재사용성 확보
+
+✅ **NestJS CRUD API 완전 구현 완료 🎉**
+- **Entity → DTO → Service → Controller → Module** 순서로 체계적 개발
+- 완전한 REST API 엔드포인트 (CRUD + 검색 기능)
+- TypeORM을 활용한 데이터베이스 연동 및 관계 설정
+- Swagger API 문서화 자동 생성
+- 비즈니스 로직 검증 및 에러 처리
+- 페이지네이션, 검색 기능, Repository 패턴 적용
+
+✅ **NestJS 아키텍처 및 설계 패턴 완전 마스터**
+- 계층화 아키텍처 (Controller → Service → Repository → Database)
+- 의존성 주입 (Dependency Injection) 완전 이해
+- SOLID 원칙 적용 (특히 SRP - 단일 책임 원칙)
+- 모듈 시스템을 통한 관심사 분리 및 캡슐화
+- TIL.md에 전체 CRUD API 구현 과정 및 학습 내용 체계적 정리
+
+✅ **User 기능 구현 시작 - 인증 시스템 설계**
+- CreateUserDto 구현 완료 (보안 중심 데이터 검증)
+- 이메일 형식 검증, 패스워드 최소 길이 검증
+- User vs Recipe DTO 설계 차이점 분석 및 학습
+- 인증 시스템 설계 고려사항 정리 (패스워드 보안, 이메일 검증)
+
+✅ **User DTO 완전 구현 완료**
+- CreateUserDto: 회원가입 데이터 검증 (이메일, 이름, 패스워드)
+- UpdateUserDto: PartialType 활용한 프로필 수정
+- LoginUserDto: 로그인 전용 데이터 검증 (이메일, 패스워드)
+- class-validator 고급 어노테이션 분석 및 보안 중심 검증 구현
+
+🔄 **진행 중인 작업**
+- UsersService 비즈니스 로직 구현 예정 (회원가입, 로그인, 프로필)
+- UsersController 인증 API 엔드포인트 구현 예정
+- FastAPI AI 서비스 기본 구조 구현 예정
+
 ### Frontend 개발 완료 현황 (2024-09-28)
 ✅ **기본 페이지 구조 완성**
 - 홈페이지 (Hero, Features, CTA 섹션)
