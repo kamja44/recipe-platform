@@ -231,9 +231,19 @@ project/                        # 모노레포 루트
 - LoginUserDto: 로그인 전용 데이터 검증 (이메일, 패스워드)
 - class-validator 고급 어노테이션 분석 및 보안 중심 검증 구현
 
+✅ **UsersService 인증 비즈니스 로직 완전 구현 완료**
+- bcrypt를 활용한 패스워드 해싱 및 검증 구현
+- 회원가입 로직: 이메일 중복 확인 + 패스워드 해싱 + 보안 반환
+- 로그인 로직: 사용자 존재 확인 + bcrypt 패스워드 검증
+- 프로필 관리: 이메일 변경 시 중복 확인 + 패스워드 변경 시 해싱
+- User-Recipe 관계 활용: 사용자별 레시피 통계 및 관계 데이터 조회
+- 보안 모범 사례: 패스워드 제외 반환, 정보 누출 방지 에러 메시지
+- Salt Rounds 최적화 (10라운드) 및 보안 vs 성능 트레이드오프 고려
+
 🔄 **진행 중인 작업**
-- UsersService 비즈니스 로직 구현 예정 (회원가입, 로그인, 프로필)
 - UsersController 인증 API 엔드포인트 구현 예정
+- UsersModule 의존성 주입 설정 예정
+- AppModule에 UsersModule 통합 예정
 - FastAPI AI 서비스 기본 구조 구현 예정
 
 ### Frontend 개발 완료 현황 (2024-09-28)

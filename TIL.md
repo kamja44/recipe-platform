@@ -1247,6 +1247,269 @@ export class RecipesController {
 export class RecipesController {
   @Post()
   async create(@Body() dto: CreateRecipeDto) {
+
+---
+
+## 🔐 **UsersService - 인증 및 보안 구현**
+
+### **1. bcrypt를 활용한 패스워드 보안**
+
+#### **bcrypt의 동작 원리**
+```typescript
+import * as bcrypt from 'bcrypt';
+
+export class UsersService {
+  private readonly saltRounds = 10; // Salt Round 설정
+
+  // 🔐 패스워드 해싱 (회원가입)
+  async register(createUserDto: CreateUserDto) {
+    const hashedPassword = await bcrypt.hash(
+      createUserDto.password,  // 평문 패스워드
+      this.saltRounds,         // Salt 라운드 (복잡도)
+    );
+
+    const user = this.userRepository.create({
+      ...createUserDto,
+      password: hashedPassword,  // 해싱된 패스워드 저장
+    });
+  }
+
+  // 🔍 패스워드 검증 (로그인)
+  async login(loginUserDto: LoginUserDto) {
+    const isPasswordValid = await bcrypt.compare(
+      loginUserDto.password,  // 사용자 입력 (평문)
+      user.password,          // DB 저장된 해시
+    );
+  }
+}
+```
+
+#### **Salt와 Hash의 보안 메커니즘**
+```
+📊 bcrypt 해싱 과정:
+1. Salt 생성: 무작위 문자열 생성 (saltRounds만큼 복잡도 증가)
+2. Password + Salt 결합
+3. Hash 함수 적용 (여러 라운드 반복)
+4. 최종 해시값 반환 ($2b$10$salt+hash 형태)
+
+🛡️ 보안 이점:
+- 같은 패스워드라도 다른 해시값 생성 (Salt 덕분)
+- 무차별 대입 공격(Brute Force) 방어
+- 레인보우 테이블 공격 방어
+- 시간 기반 공격 방어 (saltRounds로 계산 시간 조절)
+```
+
+#### **Salt Rounds의 선택 기준**
+```typescript
+// 🎯 saltRounds 선택 가이드
+private readonly saltRounds = 10;  // 권장값
+
+/*
+saltRounds와 처리 시간:
+- 10 rounds: ~65ms (권장, 2024년 기준)
+- 12 rounds: ~250ms (높은 보안)
+- 15 rounds: ~4초 (과도한 보안)
+
+⚖️ 트레이드오프:
+- 높을수록: 보안 강화, 성능 저하
+- 낮을수록: 성능 향상, 보안 약화
+*/
+```
+
+### **2. 사용자 인증 비즈니스 로직**
+
+#### **회원가입 로직 (register)**
+```typescript
+async register(createUserDto: CreateUserDto): Promise<Omit<User, 'password'>> {
+  // 🔍 1단계: 이메일 중복 확인
+  const existingUser = await this.userRepository.findOne({
+    where: { email: createUserDto.email },
+  });
+
+  if (existingUser) {
+    throw new ConflictException('이미 존재하는 이메일입니다.');
+  }
+
+  // 🔐 2단계: 패스워드 해싱
+  const hashedPassword = await bcrypt.hash(
+    createUserDto.password,
+    this.saltRounds,
+  );
+
+  // 💾 3단계: 사용자 생성 및 저장
+  const user = this.userRepository.create({
+    ...createUserDto,
+    password: hashedPassword,
+  });
+
+  const savedUser = await this.userRepository.save(user);
+
+  // 🛡️ 4단계: 보안을 위한 패스워드 제외 반환
+  const { password, ...userWithoutPassword } = savedUser;
+  return userWithoutPassword;
+}
+```
+
+#### **로그인 로직 (login)**
+```typescript
+async login(loginUserDto: LoginUserDto): Promise<Omit<User, 'password'>> {
+  // 🔍 1단계: 사용자 존재 확인
+  const user = await this.userRepository.findOne({
+    where: { email: loginUserDto.email },
+  });
+
+  if (!user) {
+    throw new UnauthorizedException(
+      '이메일 또는 패스워드가 올바르지 않습니다.',
+    );
+  }
+
+  // 🔐 2단계: 패스워드 검증
+  const isPasswordValid = await bcrypt.compare(
+    loginUserDto.password,
+    user.password,
+  );
+
+  if (!isPasswordValid) {
+    throw new UnauthorizedException(
+      '이메일 또는 패스워드가 올바르지 않습니다.',
+    );
+  }
+
+  // 🛡️ 3단계: 성공 시 패스워드 제외 반환
+  const { password, ...userWithoutPassword } = user;
+  return userWithoutPassword;
+}
+```
+
+### **3. 보안 모범 사례 구현**
+
+#### **패스워드 제외 반환 패턴**
+```typescript
+// 🛡️ 모든 메서드에서 일관된 보안 처리
+const { password, ...userWithoutPassword } = user;
+return userWithoutPassword;
+
+// 📝 TypeScript 타입으로 명시적 표현
+Promise<Omit<User, 'password'>>  // 패스워드가 제외된 User 타입
+```
+
+#### **보안 에러 메시지 설계**
+```typescript
+// ✅ 정보 누출 방지: 이메일 존재 여부를 알 수 없게 함
+if (!user || !isPasswordValid) {
+  throw new UnauthorizedException(
+    '이메일 또는 패스워드가 올바르지 않습니다.'
+  );
+}
+
+// ❌ 정보 누출 위험
+throw new UnauthorizedException('존재하지 않는 이메일입니다.');
+throw new UnauthorizedException('패스워드가 틀렸습니다.');
+```
+
+### **4. 프로필 관리 및 관계 데이터 처리**
+
+#### **사용자 조회 with 관계 데이터**
+```typescript
+async findOne(id: number): Promise<Omit<User, 'password'>> {
+  const user = await this.userRepository.findOne({
+    where: { id },
+    relations: ['recipes'], // 🔗 User의 Recipe들도 함께 조회
+  });
+
+  if (!user) {
+    throw new NotFoundException(`ID ${id}번 사용자를 찾을 수 없습니다.`);
+  }
+
+  const { password, ...userWithoutPassword } = user;
+  return userWithoutPassword;
+}
+```
+
+#### **프로필 수정 with 보안 검증**
+```typescript
+async update(id: number, updateUserDto: UpdateUserDto) {
+  // 🔍 1단계: 사용자 존재 확인
+  const existingUser = await this.userRepository.findOne({ where: { id } });
+
+  // 📧 2단계: 이메일 변경 시 중복 확인
+  if (updateUserDto.email && updateUserDto.email !== existingUser.email) {
+    const emailExists = await this.userRepository.findOne({
+      where: { email: updateUserDto.email },
+    });
+
+    if (emailExists) {
+      throw new ConflictException('이미 존재하는 이메일입니다.');
+    }
+  }
+
+  // 🔐 3단계: 패스워드 변경 시 해싱
+  if (updateUserDto.password) {
+    updateUserDto.password = await bcrypt.hash(
+      updateUserDto.password,
+      this.saltRounds,
+    );
+  }
+}
+```
+
+### **5. User-Recipe 관계 활용**
+
+#### **사용자별 레시피 통계**
+```typescript
+async getUserRecipeCount(id: number) {
+  const user = await this.userRepository.findOne({
+    where: { id },
+    relations: ['recipes'], // 관계 데이터 로드
+  });
+
+  if (!user) {
+    throw new NotFoundException(`ID ${id}번 사용자를 찾을 수 없습니다.`);
+  }
+
+  const { password, ...userWithoutPassword } = user;
+  return {
+    user: userWithoutPassword,
+    recipeCount: user.recipes.length, // 관계 데이터 활용
+  };
+}
+```
+
+### **6. 유틸리티 메서드와 확장성**
+
+#### **패스워드 검증 헬퍼**
+```typescript
+// 🔧 재사용 가능한 헬퍼 메서드
+async validatePassword(
+  plainPassword: string,
+  hashedPassword: string,
+): Promise<boolean> {
+  return bcrypt.compare(plainPassword, hashedPassword);
+}
+
+// 💡 활용 예시: JWT 토큰 갱신, 민감한 작업 재인증 등
+```
+
+### **7. NestJS 예외 처리 전략**
+
+```typescript
+// 🎯 적절한 HTTP 상태 코드와 예외 매핑
+ConflictException     → 409: 리소스 충돌 (이메일 중복)
+NotFoundException     → 404: 리소스 없음 (사용자 없음)
+UnauthorizedException → 401: 인증 실패 (로그인 실패)
+
+// 📊 프론트엔드에서 예외별 처리 가능
+try {
+  await userService.register(userData);
+} catch (error) {
+  if (error.status === 409) {
+    showError('이미 존재하는 이메일입니다.');
+  }
+}
+```
+
+---
     // 🚫 Controller에서 복잡한 로직 처리
     const validatedData = this.validateData(dto);
     const processedData = this.processBusinessLogic(validatedData);
