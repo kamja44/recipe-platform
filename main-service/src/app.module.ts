@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import databaseConfig from './config/database.config';
 import { User } from './users/entities/user.entity';
 import { Recipe } from './recipes/entities/recipe.entity';
+import { RecipesModule } from './recipes/module/recipes.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { Recipe } from './recipes/entities/recipe.entity';
       }),
       inject: [ConfigService],
     }),
+    RecipesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
