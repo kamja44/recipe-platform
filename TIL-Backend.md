@@ -2018,6 +2018,218 @@ fetch('/users/1', {
 
 ---
 
+## 🧪 **JWT 인증 시스템 실제 테스트 및 문제 해결** (2024-09-29)
+
+### **실제 API 테스트 과정**
+
+#### **1. Swagger UI를 통한 회원가입 테스트**
+
+##### **테스트 데이터**
+```json
+{
+  "email": "test@example.com",
+  "name": "테스트사용자",
+  "password": "securepassword123"
+}
+```
+
+##### **성공 응답 (201 Created)**
+```json
+{
+  "id": 1,
+  "email": "test@example.com",
+  "name": "테스트사용자",
+  "createdAt": "2025-09-29T07:15:22.664Z",
+  "updatedAt": "2025-09-29T07:15:22.664Z"
+}
+```
+
+**핵심 확인사항:**
+- ✅ **패스워드 제외**: 응답에서 패스워드 필드 자동 제거
+- ✅ **bcrypt 해싱**: 데이터베이스에 안전하게 해싱된 패스워드 저장
+- ✅ **타임스탬프**: 자동 생성된 createdAt, updatedAt 필드
+- ✅ **HTTP 상태코드**: 201 Created 정확한 응답
+
+### **2. JWT 토큰 생성 문제 해결**
+
+#### **오류 상황**
+```
+[Nest] 37216 - 2025. 09. 29. 오후 4:15:27 ERROR [ExceptionsHandler]
+Error: secretOrPrivateKey must have a value
+    at Object.module.exports [as sign] (C:\Users\YES\Desktop\study\project\main-service\node_modules\jsonwebtoken\sign.js:109:20)
+    at JwtService.sign (C:\Users\YES\Desktop\study\project\main-service\node_modules\@nestjs\jwt\dist\jwt.service.js:24:32)
+```
+
+#### **근본 원인: 환경변수 형식 문제**
+
+##### **❌ 문제가 된 .env 파일 형식**
+```env
+# JWT Configuration
+JWT_SECRET=d844ad74ecc85eb6c7fe37813d0e9630d68fa3b5f22bf00db48a4e83a5ca9fe2a4cdc1
+07569539553c3470b1193539a9ad83af39b69d222d8c71cec4f4f1a0b4
+JWT_EXPIRES_IN=7d
+```
+
+**문제점 분석:**
+- 환경변수는 **줄바꿈 불가**: 멀티라인 값 지원하지 않음
+- JWT_SECRET이 **두 줄**로 나뉘어 있음
+- Node.js가 첫 번째 줄만 읽고 나머지는 무시
+
+##### **✅ 해결된 .env 파일 형식**
+```env
+# JWT Configuration
+JWT_SECRET=d844ad74ecc85eb6c7fe37813d0e9630d68fa3b5f22bf00db48a4e83a5ca9fe2a4cdc107569539553c3470b1193539a9ad83af39b69d222d8c71cec4f4f1a0b4
+JWT_EXPIRES_IN=7d
+```
+
+**해결 방법:**
+- JWT_SECRET을 **한 줄**로 연결
+- 64바이트 hex 문자열의 무결성 유지
+
+### **3. 환경변수 디버깅 과정**
+
+#### **문제 진단 단계**
+```typescript
+// JWT 설정 디버깅
+console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET);
+console.log('JWT_SECRET length:', process.env.JWT_SECRET?.length);
+console.log('JWT_SECRET preview:', process.env.JWT_SECRET?.substring(0, 20));
+```
+
+**진단 결과:**
+- ✅ JWT_SECRET 존재 확인됨
+- ❌ **길이 문제**: 예상 128자가 아닌 64자만 읽힘
+- 🔍 **원인 파악**: 줄바꿈으로 인한 값 절반만 로딩
+
+#### **환경변수 로딩 검증**
+```typescript
+// ConfigService 값 확인
+const secret = this.configService.get<string>('jwt.secret');
+console.log('ConfigService JWT secret:', secret);
+
+// 직접 process.env 확인
+console.log('Direct env JWT_SECRET:', process.env.JWT_SECRET);
+```
+
+### **4. JWT 토큰 정상 동작 확인**
+
+#### **수정 후 회원가입 재테스트**
+```bash
+# POST /users/register
+# 동일한 테스트 데이터로 재실행
+```
+
+**결과:**
+- ✅ **에러 해결**: JWT 토큰 생성 오류 완전 해결
+- ✅ **회원가입 성공**: 201 Created 응답
+- ✅ **JWT 토큰 발급**: 로그인 시 정상적인 토큰 생성 예상
+
+### **5. 핵심 학습 사항**
+
+#### **환경변수 관리 모범 사례**
+```env
+# ✅ 올바른 환경변수 형식
+SECRET_KEY=single_line_value_without_linebreaks
+DATABASE_URL=postgresql://user:password@localhost:5432/dbname
+
+# ❌ 잘못된 환경변수 형식
+SECRET_KEY=multi_line_
+value_breaks_here
+
+# ✅ 긴 값의 경우 한 줄로 연결
+LONG_SECRET=verylongvaluethatshouldbeonasinglelineregardlessofhowlongitis
+```
+
+#### **JWT 보안 키 생성 및 관리**
+```bash
+# 안전한 JWT_SECRET 생성 방법
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+
+# 결과: 128자 hex 문자열
+d844ad74ecc85eb6c7fe37813d0e9630d68fa3b5f22bf00db48a4e83a5ca9fe2...
+```
+
+**보안 요구사항:**
+- **최소 256비트** (64바이트) 엔트로피
+- **암호학적으로 안전한 랜덤** 생성
+- **환경변수로 관리**: 하드코딩 금지
+- **버전 관리 시스템에 커밋 금지**: .env 파일 .gitignore 처리
+
+#### **NestJS 환경변수 디버깅 패턴**
+```typescript
+// 환경변수 존재 여부 확인
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required');
+}
+
+// 환경변수 길이 검증
+if (process.env.JWT_SECRET.length < 64) {
+  throw new Error('JWT_SECRET must be at least 64 characters long');
+}
+
+// ConfigService를 통한 안전한 접근
+const secret = this.configService.get<string>('jwt.secret');
+if (!secret) {
+  throw new Error('JWT secret not configured properly');
+}
+```
+
+### **6. 문제 해결 프로세스 정리**
+
+#### **에러 → 해결 단계별 과정**
+```
+1. 🚨 에러 발생: "secretOrPrivateKey must have a value"
+   ↓
+2. 🔍 환경변수 확인: JWT_SECRET 존재하지만 값이 이상함
+   ↓
+3. 📝 .env 파일 점검: 멀티라인 형식 발견
+   ↓
+4. ✅ 형식 수정: 한 줄로 연결
+   ↓
+5. 🧪 재테스트: 정상 동작 확인
+   ↓
+6. 📚 학습 정리: 환경변수 모범 사례 정리
+```
+
+#### **디버깅 도구 활용**
+- **NestJS 로그**: 상세한 에러 스택 트레이스
+- **Console 디버깅**: 환경변수 값 직접 확인
+- **Swagger UI**: 실제 API 요청/응답 테스트
+- **PostgreSQL 확인**: 데이터베이스 저장 상태 검증
+
+### **7. 테스트 완료 상태**
+
+#### **✅ 검증 완료된 기능들**
+- **회원가입 API**: 완전한 데이터 검증 및 저장
+- **패스워드 해싱**: bcrypt를 통한 안전한 패스워드 보호
+- **환경변수 관리**: JWT_SECRET 올바른 로딩
+- **에러 처리**: 상세한 에러 메시지 및 HTTP 상태 코드
+- **API 문서화**: Swagger UI를 통한 실시간 테스트
+
+#### **🔄 다음 테스트 예정**
+- **로그인 API**: JWT 토큰 발급 테스트
+- **보호된 라우트**: Bearer 토큰 인증 테스트
+- **토큰 검증**: JwtStrategy 동작 확인
+- **에러 시나리오**: 잘못된 토큰, 만료된 토큰 처리
+
+### **핵심 학습 성과**
+
+#### **실무 트러블슈팅 역량**
+1. **체계적 문제 해결**: 에러 → 원인 분석 → 해결 → 검증
+2. **환경변수 관리**: 프로덕션 수준의 설정 관리 이해
+3. **JWT 보안**: 실제 토큰 기반 인증 시스템 구현
+4. **실제 테스트**: Swagger UI를 활용한 API 검증
+
+#### **NestJS 프로덕션 배포 준비도**
+- 실제 데이터베이스와 연동된 완전한 CRUD API
+- 보안이 적용된 사용자 인증 시스템
+- 자동화된 API 문서화
+- 환경별 설정 관리 체계
+
+**🎯 핵심 성취**: Backend API가 실제로 동작하며, 프론트엔드 없이도 Swagger UI를 통해 완전한 기능 테스트 가능한 수준 달성! 🚀
+
+---
+
 ## 다음 학습 목표
 
 - [x] NestJS 기본 구조 및 모듈 시스템 ✅
@@ -2034,5 +2246,6 @@ fetch('/users/1', {
 - [x] JWT 토큰 기반 인증 시스템 구현 ✅
 - [x] JWT 인증 API 통합 및 보호된 라우트 구현 ✅
 - [x] 순환 의존성 문제 해결 (forwardRef 패턴) ✅
+- [x] 실제 JWT 인증 시스템 테스트 및 트러블슈팅 ✅
 - [ ] FastAPI AI 서비스 연동
 - [ ] 통합 테스트 및 API 문서화

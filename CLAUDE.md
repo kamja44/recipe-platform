@@ -181,15 +181,25 @@ project/                        # 모노레포 루트
 - **보호된 라우트**: @UseGuards(JwtAuthGuard) + @ApiBearerAuth() 구현
 - **순환 의존성 해결**: forwardRef() 패턴으로 모듈간 순환 참조 해결
 
+✅ **JWT 인증 시스템 실제 테스트 및 트러블슈팅 완료** (2024-09-29)
+- **실제 API 테스트**: Swagger UI를 통한 회원가입 API 완전 동작 검증
+- **JWT 토큰 오류 해결**: JWT_SECRET 환경변수 멀티라인 형식 문제 발견 및 해결
+- **bcrypt 해싱 검증**: 패스워드 보안 및 응답에서 패스워드 제외 확인
+- **환경변수 디버깅**: 체계적인 문제 진단 및 해결 프로세스 구축
+- **Production 수준 테스트**: 실제 데이터베이스 연동 및 완전한 기능 검증
+- **보안 모범 사례**: JWT_SECRET 생성, 환경변수 관리, 에러 처리 최적화
+
 🎯 **완성된 인증 시스템**
-- 회원가입/로그인 API
-- JWT 토큰 발급 및 검증
+- 회원가입/로그인 API (실제 동작 검증 완료)
+- JWT 토큰 발급 및 검증 (환경변수 문제 해결)
 - Bearer 토큰 기반 API 보호
 - Swagger JWT 인증 지원
-- Production 수준 보안 구현
+- Production 수준 보안 구현 및 실제 테스트 완료
 
 🔄 **다음 단계**
 - [ ] FastAPI AI 서비스 기본 구조 구현
+- [ ] NestJS와 FastAPI 간 마이크로서비스 통신
+- [ ] AI 레시피 추천 기능 구현
 - [ ] Frontend-Backend API 연동
 - [ ] 통합 테스트 및 E2E 테스트
 

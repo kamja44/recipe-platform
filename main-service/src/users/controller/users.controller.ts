@@ -24,7 +24,7 @@ import { LoginUserDto } from '../dto/login-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { AuthService } from '../../auth/auth.service';
 import { AuthResponse } from '../../auth/auth.types';
-import { JwtAuthGuard } from 'src/auth/auth.guard';
+import { JwtAuthGuard } from '../../auth/auth.guard';
 
 @ApiTags('users')
 @Controller('users')
