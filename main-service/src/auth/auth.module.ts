@@ -1,9 +1,9 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import jwtConfig from 'src/config/jwt.config';
-import { UsersModule } from 'src/users/module/users.module';
+import jwtConfig from '../config/jwt.config';
+import { UsersModule } from '../users/module/users.module';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
 import { JwtAuthGuard } from './auth.guard';
@@ -22,7 +22,7 @@ import { JwtAuthGuard } from './auth.guard';
       }),
       inject: [ConfigService],
     }),
-    UsersModule, // UsersService 사용을 위해 import
+    forwardRef(() => UsersModule), // UsersService 사용을 위해 import
   ],
   providers: [AuthService, JwtStrategy, JwtAuthGuard],
   exports: [AuthService, JwtAuthGuard], // 다른 모듈에서 사용할 수 있도록 Import

@@ -1800,7 +1800,221 @@ AppModule
 - 만료 시간 관리 및 토큰 갱신 준비
 - 타입 안전한 페이로드 처리
 
-**🎯 다음 단계**: UsersController에 JWT 토큰 응답 추가 및 보호된 라우트 테스트
+---
+
+## 🔐 **JWT API 통합 및 보호된 라우트 구현 완료** (2024-09-29)
+
+### **JWT 인증 API 완전 통합**
+
+#### **1. UsersController JWT 토큰 응답 구현**
+
+##### **로그인 엔드포인트 JWT 토큰 발급**
+```typescript
+// 기존: 사용자 정보만 반환
+async login(@Body() loginUserDto: LoginUserDto): Promise<Omit<User, 'password'>> {
+  return this.usersService.login(loginUserDto);
+}
+
+// 변경: JWT 토큰 + 사용자 정보 반환
+async login(@Body() loginUserDto: LoginUserDto): Promise<AuthResponse> {
+  return this.authService.login(loginUserDto);
+}
+```
+
+**핵심 변경사항:**
+- **AuthService 주입**: `private readonly authService: AuthService`
+- **반환 타입 변경**: `AuthResponse` 인터페이스 사용
+- **JWT 토큰 발급**: 로그인 성공 시 access_token 포함 응답
+
+##### **Swagger API 문서화 개선**
+```typescript
+@ApiResponse({
+  status: 200,
+  description: '로그인이 성공했습니다. JWT 토큰이 발급됩니다.',
+  schema: {
+    example: {
+      access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+      user: {
+        id: 1,
+        email: 'user@example.com',
+        name: '홍길동',
+        createdAt: '2024-09-29T...',
+        updatedAt: '2024-09-29T...'
+      }
+    }
+  }
+})
+```
+
+### **2. 보호된 라우트 구현**
+
+#### **JwtAuthGuard 적용**
+```typescript
+// 보호된 사용자 프로필 조회
+@Get(':id')
+@UseGuards(JwtAuthGuard)  // JWT 인증 필수
+@ApiBearerAuth()         // Swagger Bearer 토큰 표시
+async findOne(@Param('id', ParseIntPipe) id: number) {
+  return this.usersService.findOne(id);
+}
+
+// 보호된 프로필 수정
+@Patch(':id')
+@UseGuards(JwtAuthGuard)  // JWT 인증 필수
+@ApiBearerAuth()         // Swagger Bearer 토큰 표시
+async update(@Param('id', ParseIntPipe) id: number, @Body() updateUserDto: UpdateUserDto) {
+  return this.usersService.update(id, updateUserDto);
+}
+```
+
+**보호된 라우트 특징:**
+- **Bearer 토큰 필수**: `Authorization: Bearer <JWT_TOKEN>`
+- **자동 사용자 검증**: JwtStrategy가 토큰 유효성 확인
+- **req.user 자동 설정**: 검증된 사용자 정보 주입
+- **Swagger 문서화**: Bearer 토큰 입력 필드 자동 생성
+
+### **3. NestJS 순환 의존성 문제 해결**
+
+#### **순환 의존성 문제 발생**
+```typescript
+// 문제 상황
+AuthModule → UsersModule (UsersService 의존)
+UsersModule → AuthModule (AuthService 의존)
+
+// 에러: UndefinedModuleException
+// The module at index [3] of the AuthModule "imports" array is undefined.
+```
+
+#### **forwardRef() 해결 패턴**
+```typescript
+// AuthModule 수정
+@Module({
+  imports: [
+    // ... 기타 imports
+    forwardRef(() => UsersModule), // 순환 의존성 해결
+  ],
+  providers: [AuthService, JwtStrategy, JwtAuthGuard],
+  exports: [AuthService, JwtAuthGuard],
+})
+export class AuthModule {}
+
+// UsersModule 수정
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([User]),
+    forwardRef(() => AuthModule), // 순환 의존성 해결
+  ],
+  controllers: [UsersController],
+  providers: [UsersService],
+  exports: [UsersService],
+})
+export class UsersModule {}
+```
+
+**forwardRef() 동작 원리:**
+1. **지연 로딩**: 모듈 인스턴스화를 지연시켜 순환 참조 방지
+2. **런타임 해결**: 애플리케이션 초기화 시 의존성 그래프 정리
+3. **타입 안전성**: TypeScript 타입 체크 유지
+
+#### **순환 의존성 해결 패턴 학습**
+
+**일반적인 순환 의존성 시나리오:**
+```typescript
+// Case 1: 모듈간 서비스 상호 참조
+ModuleA → ServiceB
+ModuleB → ServiceA
+
+// Case 2: 인증/권한 시스템
+AuthModule → UserModule (사용자 정보 필요)
+UserModule → AuthModule (인증 기능 필요)
+
+// Case 3: 부모-자식 관계 엔티티
+ParentModule → ChildModule
+ChildModule → ParentModule
+```
+
+**해결 방법 비교:**
+```typescript
+// 1. forwardRef() - 모듈 레벨
+forwardRef(() => ModuleB)
+
+// 2. @Inject(forwardRef()) - 서비스 레벨
+constructor(@Inject(forwardRef(() => ServiceB)) private serviceB: ServiceB) {}
+
+// 3. 공통 모듈 분리 - 아키텍처 레벨
+AuthModule → CommonModule ← UserModule
+```
+
+### **4. JWT 인증 완전한 플로우**
+
+#### **전체 인증 플로우**
+```
+1. POST /users/register → 회원가입
+2. POST /users/login → JWT 토큰 발급
+3. 클라이언트 토큰 저장 (localStorage, cookie 등)
+4. API 요청 시 Header: Authorization: Bearer <token>
+5. JwtStrategy 토큰 검증 → req.user 설정
+6. 보호된 라우트 접근 허용
+```
+
+#### **JWT 토큰 검증 과정**
+```typescript
+// 1. 토큰 추출
+ExtractJwt.fromAuthHeaderAsBearerToken()
+
+// 2. 서명 검증
+secretOrKey: configService.get('jwt.secret')
+
+// 3. 만료 시간 확인
+ignoreExpiration: false
+
+// 4. 사용자 존재 확인
+const user = await this.authService.validateUser(payload);
+
+// 5. req.user 설정
+return user; // 자동으로 req.user에 할당
+```
+
+### **5. 실제 프로덕션 수준 보안 구현**
+
+#### **Bearer 토큰 인증 구현**
+```typescript
+// 클라이언트 요청 예시
+fetch('/users/1', {
+  headers: {
+    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    'Content-Type': 'application/json'
+  }
+});
+
+// 서버 검증 과정
+// 1. Authorization 헤더 파싱
+// 2. Bearer 스키마 확인
+// 3. JWT 토큰 추출 및 검증
+// 4. 페이로드 기반 사용자 조회
+// 5. 유효한 사용자면 API 접근 허용
+```
+
+### **핵심 학습 성과**
+
+#### **JWT 인증 시스템 완전 구현**
+1. **토큰 발급**: 로그인 시 JWT 토큰 생성
+2. **토큰 검증**: Bearer 토큰 기반 API 보호
+3. **사용자 인증**: JwtStrategy를 통한 자동 사용자 검증
+4. **API 문서화**: Swagger Bearer 토큰 지원
+
+#### **NestJS 고급 모듈 패턴 숙련도**
+- **순환 의존성 해결**: forwardRef() 패턴 완전 이해
+- **Guard 패턴**: 선언적 라우트 보호 구현
+- **의존성 주입**: 복잡한 모듈 간 관계 관리
+- **타입 안전성**: TypeScript + NestJS 완전 활용
+
+#### **실전 보안 시스템 구축**
+- Production 수준의 JWT 인증 시스템
+- RESTful API 보안 모범 사례 적용
+- 확장 가능한 인증/권한 아키텍처 설계
+
+**🎯 완성된 기능**: 완전한 JWT 기반 인증 시스템 + 보호된 API 라우트
 
 ---
 
@@ -1818,6 +2032,7 @@ AppModule
 - [x] Docker Compose 환경 설정 ✅
 - [x] NestJS 서버 실행 및 Swagger 설정 ✅
 - [x] JWT 토큰 기반 인증 시스템 구현 ✅
-- [ ] JWT 인증 API 통합 및 보호된 라우트 테스트 🔄
+- [x] JWT 인증 API 통합 및 보호된 라우트 구현 ✅
+- [x] 순환 의존성 문제 해결 (forwardRef 패턴) ✅
 - [ ] FastAPI AI 서비스 연동
 - [ ] 통합 테스트 및 API 문서화
