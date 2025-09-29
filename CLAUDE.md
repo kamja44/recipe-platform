@@ -240,10 +240,19 @@ project/                        # 모노레포 루트
 - 보안 모범 사례: 패스워드 제외 반환, 정보 누출 방지 에러 메시지
 - Salt Rounds 최적화 (10라운드) 및 보안 vs 성능 트레이드오프 고려
 
+✅ **UsersController 인증 API 엔드포인트 완전 구현 완료** (2024-09-29)
+- 완전한 REST API 엔드포인트 구현 (POST register/login, GET/:id, PATCH/:id)
+- HTTP 상태 코드 최적화 (201, 200, 404, 409, 401)
+- Swagger API 문서화 완성 (@ApiTags, @ApiOperation, @ApiResponse)
+- 타입 안전성 보장 (ParseIntPipe, Omit<User, 'password'>)
+- REST API 설계 원칙 준수 (리소스 중심 URL, 적절한 HTTP 메서드)
+- 보안 모범 사례 적용 (패스워드 제외 응답, 입력 검증)
+- Controller 계층 분리 원칙 (얇은 계층, Service 위임)
+
 🔄 **진행 중인 작업**
-- UsersController 인증 API 엔드포인트 구현 예정
-- UsersModule 의존성 주입 설정 예정
+- UsersModule 의존성 주입 설정 구현 예정
 - AppModule에 UsersModule 통합 예정
+- API 테스트 및 검증 예정
 - FastAPI AI 서비스 기본 구조 구현 예정
 
 ### Frontend 개발 완료 현황 (2024-09-28)
@@ -332,4 +341,5 @@ project/                        # 모노레포 루트
 - **Claude는 코드를 직접 작성하지 않음**
 - **Claude는 가이드와 설명만 제공**
 - **사용자가 직접 코드를 타이핑하여 학습**
+- **코드 제공 방식**: Claude가 코드 블록으로 제공하면 사용자가 파일에 직접 복사하여 작성
 - 단계별 진행하며 각 단계 완료 후 다음 단계로 진행
