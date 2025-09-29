@@ -8,13 +8,15 @@ import { User } from './users/entities/user.entity';
 import { Recipe } from './recipes/entities/recipe.entity';
 import { RecipesModule } from './recipes/module/recipes.module';
 import { UsersModule } from './users/module/users.module';
+import jwtConfig from './config/jwt.config';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
     // 환경변수 설정
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [databaseConfig],
+      load: [databaseConfig, jwtConfig],
     }),
 
     // TypeORM 설정
@@ -34,6 +36,7 @@ import { UsersModule } from './users/module/users.module';
     }),
     RecipesModule,
     UsersModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

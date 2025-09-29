@@ -1078,6 +1078,732 @@ Promise<Omit<User, 'password'>>  // 모든 응답에서 패스워드 제외
 
 ---
 
+## 🔧 **UsersModule & AppModule 통합 완료** (2024-09-29)
+
+### **UsersModule 의존성 주입 구현**
+
+#### **완전한 모듈 구성**
+```typescript
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([User]), // User Repository 등록
+  ],
+  controllers: [UsersController],     // HTTP 인터페이스 등록
+  providers: [UsersService],          // 비즈니스 로직 서비스 등록
+  exports: [UsersService],            // 다른 모듈에서 사용 가능하도록 내보내기
+})
+export class UsersModule {}
+```
+
+**핵심 요소 분석:**
+- **imports**: `TypeOrmModule.forFeature([User])` → Repository 패턴 활성화
+- **controllers**: HTTP 요청 처리를 위한 Controller 등록
+- **providers**: 의존성 주입 컨테이너에 Service 등록
+- **exports**: 다른 모듈에서 UsersService 재사용 가능
+
+### **AppModule 전체 시스템 통합**
+
+#### **완전한 마이크로서비스 구성**
+```typescript
+@Module({
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [databaseConfig],
+    }),
+    TypeOrmModule.forRootAsync({
+      // PostgreSQL 연결 설정
+    }),
+    RecipesModule,  // 레시피 API
+    UsersModule,    // 사용자 인증 API
+  ],
+  controllers: [AppController],
+  providers: [AppService],
+})
+export class AppModule {}
+```
+
+**시스템 아키텍처:**
+```
+AppModule
+├── ConfigModule (전역 환경변수)
+├── TypeOrmModule (PostgreSQL 연결)
+├── RecipesModule (레시피 CRUD API)
+└── UsersModule (사용자 인증 API)
+```
+
+### **NestJS 모듈 시스템 동작 원리**
+
+#### **의존성 주입 생명주기**
+```
+1. ConfigModule 초기화 → 환경변수 로딩
+2. TypeOrmModule 초기화 → 데이터베이스 연결
+3. Entity Repository 생성 → User, Recipe Repository
+4. Service 인스턴스화 → UsersService, RecipesService
+5. Controller 인스턴스화 → 의존성 자동 주입
+6. HTTP 라우팅 등록 → /users, /recipes 경로 활성화
+```
+
+#### **모듈 간 통신 패턴**
+```typescript
+// UsersModule에서 exports한 Service를 다른 모듈에서 사용
+@Module({
+  imports: [UsersModule],  // UsersService 가져오기
+})
+export class AuthModule {
+  constructor(private usersService: UsersService) {}  // 자동 주입
+}
+```
+
+---
+
+## 🐳 **Docker Compose 환경 설정 학습** (2024-09-29)
+
+### **마이크로서비스 컨테이너 아키텍처**
+
+#### **서비스 구성도**
+```yaml
+services:
+  frontend:     # Next.js (포트: 3000)
+  main-service: # NestJS (포트: 3001)
+  ai-service:   # FastAPI (포트: 8000)
+  postgres:     # PostgreSQL (포트: 5432)
+  redis:        # Redis (포트: 6379)
+```
+
+### **환경변수 관리 패턴**
+
+#### **이중 환경변수 구조 이해**
+```
+project/
+├── .env                    # Docker Compose용 환경변수
+└── main-service/
+    └── .env                # NestJS 애플리케이션용 환경변수
+```
+
+**각각의 역할:**
+- **프로젝트 루트/.env**: Docker Compose가 컨테이너 생성 시 사용
+- **main-service/.env**: NestJS 런타임에서 ConfigService가 읽음
+
+#### **환경변수 흐름**
+```
+1. Docker Compose 실행 시:
+   project/.env → docker-compose.yml → 컨테이너 환경변수
+
+2. NestJS 애플리케이션 실행 시:
+   main-service/.env → ConfigService → 애플리케이션 설정
+```
+
+### **PostgreSQL Docker 컨테이너 관리**
+
+#### **컨테이너 생명주기 명령어**
+```bash
+# PostgreSQL 컨테이너만 실행
+docker-compose up -d postgres
+
+# 전체 서비스 실행
+docker-compose up -d
+
+# 상태 확인
+docker-compose ps
+
+# 로그 확인
+docker-compose logs postgres
+
+# 컨테이너 정리
+docker-compose down
+```
+
+#### **데이터 영속성 관리**
+```yaml
+volumes:
+  postgres_data:  # 데이터베이스 데이터 영구 보존
+  redis_data:     # Redis 데이터 영구 보존
+```
+
+### **개발 환경 vs 프로덕션 환경**
+
+#### **개발 환경 특징**
+- `synchronize: true` → Entity 변경 시 자동 스키마 동기화
+- 볼륨 마운팅 → 코드 변경 시 자동 재로딩
+- 로컬 포트 바인딩 → 직접 접근 가능
+
+#### **컨테이너화의 장점**
+1. **환경 일관성**: 모든 개발자가 동일한 PostgreSQL 버전 사용
+2. **빠른 설정**: 복잡한 데이터베이스 설치 과정 불필요
+3. **격리**: 로컬 시스템에 영향 없이 개발 환경 구성
+4. **확장성**: Redis, AI 서비스 등 쉽게 추가 가능
+
+### **핵심 학습 성과**
+
+#### **Docker Compose 숙련도**
+- 마이크로서비스 환경 구성 이해
+- 환경변수 관리 패턴 학습
+- 컨테이너 간 네트워킹 개념
+
+#### **DevOps 기초 역량**
+- 개발 환경 컨테이너화
+- 데이터 영속성 관리
+- 서비스 의존성 관리 (`depends_on`)
+
+---
+
+---
+
+## 🚀 **NestJS 서버 실행 및 Swagger 설정 완료** (2024-09-29)
+
+### **환경변수 문제 해결**
+
+#### **문제 상황: 환경변수 이름 불일치**
+```typescript
+// ❌ database.config.ts에서
+host: process.env.DATABASE_HOST
+
+// ❌ .env 파일에서
+DB_HOST=localhost
+```
+
+**해결:**
+```typescript
+// ✅ database.config.ts 수정
+host: process.env.DB_HOST || 'localhost',
+port: parseInt(process.env.DB_PORT || '5432', 10),
+username: process.env.DB_USERNAME,
+password: process.env.DB_PASSWORD,
+database: process.env.DB_DATABASE,
+```
+
+### **포트 충돌 해결**
+
+#### **문제: Frontend와 Backend 포트 충돌**
+- Frontend: 포트 3000 사용 중
+- Backend: 포트 3000 시도 → `EADDRINUSE` 에러
+
+**해결:**
+```bash
+# main-service/.env
+PORT=3001  # 3000 → 3001로 변경
+```
+
+### **Swagger API 문서화 설정**
+
+#### **main.ts 완전 구성**
+```typescript
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ValidationPipe } from '@nestjs/common';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+
+  // 전역 파이프 설정 (DTO 검증)
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+
+  // Swagger 설정
+  const config = new DocumentBuilder()
+    .setTitle('AI Recipe Platform API')
+    .setDescription('AI 레시피 추천 플랫폼 API 문서')
+    .setVersion('1.0')
+    .addTag('recipes', '레시피 관련 API')
+    .addTag('users', '사용자 관련 API')
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document);
+
+  await app.listen(process.env.PORT ?? 3000);
+}
+bootstrap();
+```
+
+### **API 엔드포인트 확인**
+
+#### **서비스 접근 URL**
+- **기본 API**: http://localhost:3001 → "Hello World!"
+- **Swagger 문서**: http://localhost:3001/api → 완전한 API 문서
+- **레시피 API**: http://localhost:3001/recipes
+- **사용자 API**: http://localhost:3001/users
+
+### **ValidationPipe 전역 설정 상세 분석**
+
+#### **전역 파이프 설정의 핵심 보안 메커니즘**
+```typescript
+app.useGlobalPipes(
+  new ValidationPipe({
+    whitelist: true,              // DTO에 정의되지 않은 속성 자동 제거
+    forbidNonWhitelisted: true,   // 허용되지 않은 속성 발견 시 에러 발생
+    transform: true,              // 타입 자동 변환 (string → number, boolean)
+  }),
+);
+```
+
+#### **1. whitelist: true - 보안 필드 자동 제거**
+
+```typescript
+// DTO 정의
+export class CreateUserDto {
+  @IsEmail()
+  email: string;
+
+  @IsString()
+  name: string;
+}
+
+// 클라이언트 요청 (악의적 필드 포함)
+POST /users/register
+{
+  "email": "test@test.com",
+  "name": "홍길동",
+  "isAdmin": true,           // ← 관리자 권한 탈취 시도
+  "role": "SUPER_ADMIN",     // ← 권한 상승 시도
+  "balance": 1000000,        // ← 잔액 조작 시도
+  "maliciousField": "hack"   // ← 악의적 데이터
+}
+
+// 실제 DTO로 전달되는 데이터 (자동 필터링됨)
+{
+  "email": "test@test.com",
+  "name": "홍길동"
+  // isAdmin, role, balance, maliciousField 모두 자동 제거
+}
+```
+
+**보안 효과:**
+- Mass Assignment 공격 방지
+- 예상치 못한 필드 주입 차단
+- DTO 기반 화이트리스트 방식 보안
+
+#### **2. forbidNonWhitelisted: true - 엄격한 검증**
+
+```typescript
+// whitelist와 함께 사용시 더 엄격한 보안
+POST /users/register
+{
+  "email": "test@test.com",
+  "name": "홍길동",
+  "hackerField": "악의적데이터"  // ← 즉시 에러 발생
+}
+
+// 응답 (400 Bad Request)
+{
+  "statusCode": 400,
+  "message": ["property hackerField should not exist"],
+  "error": "Bad Request"
+}
+```
+
+**동작 차이:**
+- **whitelist만**: 불필요한 필드 조용히 제거
+- **forbidNonWhitelisted 추가**: 불필요한 필드 발견시 즉시 에러
+
+#### **3. transform: true - 자동 타입 변환**
+
+##### **URL 매개변수 자동 변환**
+```typescript
+@Get(':id')
+async findOne(@Param('id') id: number) {
+  // URL: /users/123
+  // 문자열 "123" → 숫자 123 자동 변환
+  console.log(typeof id);  // "number"
+  console.log(id + 1);     // 124 (숫자 연산 가능)
+}
+
+// 변환 실패시 자동 에러
+GET /users/abc  // → 400 Bad Request: "id must be a number"
+```
+
+##### **쿼리 파라미터 자동 변환**
+```typescript
+@Get()
+async findMany(
+  @Query('page') page: number,
+  @Query('limit') limit: number,
+  @Query('published') published: boolean
+) {
+  // URL: /recipes?page=2&limit=10&published=true
+  console.log(page);      // 2 (number)
+  console.log(limit);     // 10 (number)
+  console.log(published); // true (boolean)
+}
+```
+
+##### **DTO 필드 자동 변환**
+```typescript
+export class CreateRecipeDto {
+  @IsString()
+  title: string;
+
+  @IsNumber()
+  @Transform(({ value }) => parseInt(value))  // 명시적 변환
+  cookingTime: number;
+
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true') // 문자열 → 불린 변환
+  isPublic: boolean;
+}
+
+// 요청 데이터 (모든 값이 문자열로 전달)
+{
+  "title": "김치찌개",
+  "cookingTime": "30",     // "30" → 30 자동 변환
+  "isPublic": "true"       // "true" → true 자동 변환
+}
+```
+
+### **보안 강화 전후 비교**
+
+#### **❌ 전역 파이프 없을 때 (위험)**
+```typescript
+@Post()
+async create(@Body() body: any) {
+  // 매번 수동 검증 필요
+  if (!body.email || !isEmail(body.email)) {
+    throw new BadRequestException('잘못된 이메일');
+  }
+  if (!body.name || typeof body.name !== 'string') {
+    throw new BadRequestException('이름이 필요합니다');
+  }
+  if (body.isAdmin) {
+    // 보안 위험: 관리자 권한 탈취 가능
+    throw new BadRequestException('관리자 권한 설정 불가');
+  }
+
+  // 모든 컨트롤러에서 반복적인 검증 코드...
+  return this.usersService.create(body);
+}
+```
+
+#### **✅ 전역 파이프 적용 후 (안전)**
+```typescript
+@Post()
+async create(@Body() createUserDto: CreateUserDto) {
+  // DTO 어노테이션만으로 모든 검증 자동 처리
+  // 1. class-validator 규칙 자동 적용
+  // 2. 정의되지 않은 필드 자동 제거 또는 에러
+  // 3. 타입 자동 변환
+  // 4. 검증 실패시 자동으로 400 에러 반환
+
+  return this.usersService.create(createUserDto);
+}
+```
+
+### **개발 효율성 향상**
+
+#### **반복 코드 제거**
+```typescript
+// Before: 모든 엔드포인트에서 반복
+@Post('/recipes')
+async createRecipe(@Body() body: any) {
+  this.validateRecipeData(body);  // 수동 검증
+}
+
+@Post('/users')
+async createUser(@Body() body: any) {
+  this.validateUserData(body);    // 수동 검증
+}
+
+// After: DTO만 정의하면 자동 검증
+@Post('/recipes')
+async createRecipe(@Body() dto: CreateRecipeDto) {
+  // 검증 코드 불필요
+}
+
+@Post('/users')
+async createUser(@Body() dto: CreateUserDto) {
+  // 검증 코드 불필요
+}
+```
+
+### **핵심 정리**
+
+**ValidationPipe 전역 설정의 핵심 이점:**
+
+1. **보안 강화**
+   - Mass Assignment 공격 방지
+   - 예상치 못한 필드 주입 차단
+   - 화이트리스트 기반 엄격한 검증
+
+2. **타입 안전성**
+   - 런타임 타입 변환 및 검증
+   - 컴파일 타임과 런타임 타입 일치 보장
+   - 타입 에러 조기 발견
+
+3. **개발 효율성**
+   - 반복적인 검증 코드 제거
+   - DTO 중심의 선언적 검증
+   - 일관된 에러 메시지 자동 생성
+
+4. **유지보수성**
+   - 모든 엔드포인트에서 동일한 검증 적용
+   - 중앙집중식 설정 관리
+   - 검증 로직의 일관성 보장
+
+이 설정을 통해 개발자는 **DTO 정의에만 집중**하면 되고, **보안, 검증, 타입 변환은 NestJS가 자동 처리**합니다! 🛡️
+
+### **완전한 NestJS 마이크로서비스 완성**
+
+#### **구현 완료된 기능들**
+✅ **PostgreSQL 연동**: TypeORM을 통한 완전한 데이터베이스 연결
+✅ **사용자 인증 API**: 회원가입, 로그인, 프로필 관리 (bcrypt 해싱)
+✅ **레시피 CRUD API**: 생성, 조회, 수정, 삭제 + 검색 기능
+✅ **Swagger 문서화**: 완전한 API 스펙 및 테스트 인터페이스
+✅ **입력 검증**: DTO 기반 자동 데이터 검증
+✅ **에러 처리**: NestJS 표준 예외 처리
+✅ **모듈 시스템**: 완전한 의존성 주입 및 모듈 분리
+
+#### **기술적 성취**
+- **완전한 Backend API**: Production 수준의 NestJS 서비스
+- **보안 모범 사례**: 패스워드 해싱, 입력 검증, 정보 누출 방지
+- **확장 가능한 아키텍처**: 모듈화된 구조로 기능 추가 용이
+- **자동 문서화**: 개발과 동시에 API 문서 자동 업데이트
+
+---
+
+## 🔐 **JWT 토큰 기반 인증 시스템 구현 완료** (2024-09-29)
+
+### **JWT 인증 시스템 아키텍처**
+
+#### **핵심 구성 요소**
+```
+로그인 요청 → AuthService → JWT 토큰 발급 → 클라이언트 저장 → API 요청 시 Bearer 토큰 → JwtStrategy 검증 → 사용자 인증 완료
+```
+
+### **1. JWT 설정 및 환경변수 관리**
+
+#### **JWT 보안 키 생성**
+```bash
+# 안전한 JWT_SECRET 생성
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+```
+
+**환경변수 설정:**
+```env
+# JWT Configuration
+JWT_SECRET=d844ad74ecc85eb6c7fe37813d0e9630d68fa3b5f22bf00db48a4e83a5ca9fe2...
+JWT_EXPIRES_IN=7d
+```
+
+#### **JWT 설정 파일 구조화**
+```typescript
+// src/config/jwt.config.ts
+import { registerAs } from '@nestjs/config';
+
+export default registerAs('jwt', () => ({
+  secret: process.env.JWT_SECRET || 'fallback-secret-key',
+  expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+}));
+```
+
+### **2. Auth 모듈 설계 패턴**
+
+#### **파일 구조**
+```
+src/auth/
+├── auth.types.ts        # JWT 페이로드 및 응답 타입
+├── auth.service.ts      # JWT 토큰 생성/검증 서비스
+├── jwt.strategy.ts      # Passport JWT 전략
+├── auth.guard.ts        # JWT 인증 가드
+└── auth.module.ts       # Auth 모듈 설정
+```
+
+### **3. 타입 안전성 확보**
+
+#### **JWT 타입 정의**
+```typescript
+// auth.types.ts
+export interface JwtPayload {
+  sub: number;    // 사용자 ID
+  email: string;
+  name: string;
+  iat?: number;   // issued at
+  exp?: number;   // expiration time
+}
+
+export interface AuthResponse {
+  access_token: string;
+  user: Omit<User, 'password'>;
+}
+```
+
+**핵심 설계 원칙:**
+- **타입 분리**: auth.types.ts로 재사용 가능한 타입 관리
+- **제네릭 활용**: `configService.get<string>('jwt.secret')`
+- **타입 가드**: 런타임 타입 검증으로 안전성 확보
+
+### **4. AuthService - JWT 토큰 생성 로직**
+
+#### **핵심 비즈니스 로직**
+```typescript
+@Injectable()
+export class AuthService {
+  async login(loginUserDto: LoginUserDto): Promise<AuthResponse> {
+    // 1. 사용자 인증 (기존 UsersService 활용)
+    const user = await this.usersService.login(loginUserDto);
+
+    // 2. JWT 페이로드 생성 (타입 안전)
+    const payload: JwtPayload = {
+      sub: user.id,
+      email: user.email,
+      name: user.name
+    };
+
+    // 3. JWT 토큰 생성 및 반환
+    return {
+      access_token: this.jwtService.sign(payload),
+      user: user,
+    };
+  }
+}
+```
+
+**설계 특징:**
+- **기존 서비스 재활용**: UsersService.login() 메서드 활용
+- **명확한 책임 분리**: 인증(Users) vs 토큰 생성(Auth)
+- **타입 안전한 페이로드**: JwtPayload 인터페이스 활용
+
+### **5. JwtStrategy - Passport 인증 전략**
+
+#### **JWT 검증 메커니즘**
+```typescript
+@Injectable()
+export class JwtStrategy extends PassportStrategy(Strategy) {
+  constructor(
+    configService: ConfigService,
+    private authService: AuthService,
+  ) {
+    // JWT_SECRET 존재 확인 및 설정
+    const secret = configService.get<string>('jwt.secret') || 'fallback-secret';
+
+    super({
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(), // Bearer 토큰
+      ignoreExpiration: false,  // 만료 토큰 거부
+      secretOrKey: secret,      // 검증용 시크릿 키
+    });
+  }
+
+  async validate(payload: any) {
+    const user = await this.authService.validateUser(payload as JwtPayload);
+    if (!user) {
+      throw new UnauthorizedException('토큰이 유효하지 않습니다');
+    }
+    return user; // req.user에 자동 설정
+  }
+}
+```
+
+**핵심 동작:**
+1. **Bearer 토큰 추출**: `Authorization: Bearer <token>`
+2. **JWT 서명 검증**: secret 키로 토큰 유효성 확인
+3. **사용자 존재 확인**: 데이터베이스에서 사용자 조회
+4. **req.user 설정**: 검증된 사용자 정보를 요청 객체에 저장
+
+### **6. TypeScript 타입 안전성 문제 해결**
+
+#### **Constructor에서 ConfigService 접근 문제**
+```typescript
+// ❌ 문제: super() 내에서 this.configService 접근 불가
+super({
+  secretOrKey: this.configService.get('jwt.secret') // Error!
+});
+
+// ✅ 해결: super() 호출 전에 값 추출
+constructor(configService: ConfigService, ...) {
+  const secret = configService.get<string>('jwt.secret') || 'fallback-secret';
+  super({
+    secretOrKey: secret // 안전한 접근
+  });
+}
+```
+
+#### **타입 경고 해결**
+```typescript
+// ❌ 문제: 사용하지 않는 private 속성 경고
+constructor(private configService: ConfigService) // 경고 발생
+
+// ✅ 해결: 초기화에만 사용하는 경우 private 제거
+constructor(configService: ConfigService) // 경고 해결
+```
+
+### **7. Auth 모듈 의존성 주입 설계**
+
+#### **완전한 모듈 구성**
+```typescript
+@Module({
+  imports: [
+    ConfigModule.forFeature(jwtConfig),  // JWT 설정 로드
+    PassportModule.register({ defaultStrategy: 'jwt' }),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get('jwt.secret'),
+        signOptions: { expiresIn: configService.get('jwt.expiresIn') }
+      }),
+      inject: [ConfigService],
+    }),
+    UsersModule, // UsersService 의존성
+  ],
+  providers: [AuthService, JwtStrategy, JwtAuthGuard],
+  exports: [AuthService, JwtAuthGuard], // 다른 모듈에서 사용
+})
+export class AuthModule {}
+```
+
+**의존성 관계:**
+- `AuthService` → `UsersService` (사용자 검증)
+- `JwtStrategy` → `AuthService` (토큰 검증)
+- `JwtModule` → `ConfigService` (JWT 설정)
+
+### **8. AppModule 통합 및 전역 설정**
+
+#### **설정 파일 통합**
+```typescript
+ConfigModule.forRoot({
+  isGlobal: true,
+  load: [databaseConfig, jwtConfig], // JWT 설정 추가
+}),
+```
+
+#### **모듈 의존성 구조**
+```
+AppModule
+├── ConfigModule (환경변수: DB + JWT)
+├── TypeOrmModule (PostgreSQL 연결)
+├── RecipesModule (레시피 API)
+├── UsersModule (사용자 API)
+└── AuthModule (JWT 인증)
+```
+
+### **핵심 학습 성과**
+
+#### **JWT 인증 시스템 완전 이해**
+1. **보안 설계**: 안전한 JWT_SECRET 생성 및 관리
+2. **아키텍처 패턴**: Service-Strategy-Guard 분리
+3. **타입 안전성**: TypeScript 타입 시스템 완전 활용
+4. **모듈 설계**: 의존성 주입 및 관심사 분리
+
+#### **NestJS 고급 패턴 숙련도**
+- **Passport 통합**: JWT Strategy 구현
+- **Guard 패턴**: 인증 미들웨어 설계
+- **Configuration**: 환경별 설정 관리
+- **Module 시스템**: 복잡한 의존성 관리
+
+#### **실제 프로덕션 수준 보안**
+- 암호화된 JWT 토큰 생성/검증
+- Bearer 토큰 기반 API 보호
+- 만료 시간 관리 및 토큰 갱신 준비
+- 타입 안전한 페이로드 처리
+
+**🎯 다음 단계**: UsersController에 JWT 토큰 응답 추가 및 보호된 라우트 테스트
+
+---
+
 ## 다음 학습 목표
 
 - [x] NestJS 기본 구조 및 모듈 시스템 ✅
@@ -1087,8 +1813,11 @@ Promise<Omit<User, 'password'>>  // 모든 응답에서 패스워드 제외
 - [x] Controller 계층 HTTP 인터페이스 구현 ✅
 - [x] User 인증 시스템 설계 ✅
 - [x] UsersController 완전 구현 ✅
-- [ ] UsersModule 의존성 주입 설정 🔄
-- [ ] AppModule 통합 및 전체 시스템 연결
-- [ ] JWT 토큰 기반 인증 구현
+- [x] UsersModule 의존성 주입 설정 ✅
+- [x] AppModule 통합 및 전체 시스템 연결 ✅
+- [x] Docker Compose 환경 설정 ✅
+- [x] NestJS 서버 실행 및 Swagger 설정 ✅
+- [x] JWT 토큰 기반 인증 시스템 구현 ✅
+- [ ] JWT 인증 API 통합 및 보호된 라우트 테스트 🔄
 - [ ] FastAPI AI 서비스 연동
 - [ ] 통합 테스트 및 API 문서화
