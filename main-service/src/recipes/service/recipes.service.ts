@@ -8,12 +8,18 @@ import { Recipe } from '../entities/recipe.entity';
 import { Repository } from 'typeorm';
 import { CreateRecipeDto } from '../dto/create-recipe.dto';
 import { UpdateRecipeDto } from '../dto/update-recipe.dto';
+import { HttpService } from '@nestjs/axios';
+import { ConfigService } from '@nestjs/config';
+import { firstValueFrom } from 'rxjs';
+import { AIRecipeResponseDto } from '../dto/ai-recipe-response.dto';
 
 @Injectable()
 export class RecipesService {
   constructor(
     @InjectRepository(Recipe)
     private recipeRepository: Repository<Recipe>,
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
   ) {}
 
   // 레시피 생성
@@ -130,5 +136,38 @@ export class RecipesService {
       })
       .orderBy('recipe.createdAt', 'DESC')
       .getMany();
+  }
+
+  // AI를 활용하여 레시피 생성
+  async generateRecipeWithAI(
+    ingredients: string[],
+    preferences?: string,
+    provider?: 'openai' | 'claude',
+  ): Promise<AIRecipeResponseDto> {
+    try {
+      // FastAPI 서비스 URL (환경 변수에서 가져오기)
+      const aiServiceUrl =
+        this.configService.get<string>('AI_SERVICE_URL') ||
+        'http://localhost:8000';
+
+      const response = await firstValueFrom(
+        this.httpService.post<AIRecipeResponseDto>(
+          `${aiServiceUrl}/api/recipes/generate`,
+          {
+            ingredients,
+            preferences,
+            provider: provider || 'openai',
+          },
+        ),
+      );
+
+      return response.data;
+    } catch (error) {
+      // error 타입 가드
+      if (error instanceof Error) {
+        throw new Error(`AI 레시피 생성 실패: ${error.message}`);
+      }
+      throw new Error('AI 레시피 생성 중 알 수 없는 오류가 발생했습니다.');
+    }
   }
 }

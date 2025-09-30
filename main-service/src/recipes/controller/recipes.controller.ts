@@ -22,6 +22,8 @@ import { RecipesService } from '../service/recipes.service';
 import { Recipe } from '../entities/recipe.entity';
 import { CreateRecipeDto } from '../dto/create-recipe.dto';
 import { UpdateRecipeDto } from '../dto/update-recipe.dto';
+import { GenerateRecipeDto } from '../dto/generate-recipe.dto';
+import { AIRecipeResponseDto } from '../dto/ai-recipe-response.dto';
 
 @ApiTags('recipes')
 @Controller('recipes')
@@ -201,5 +203,34 @@ export class RecipesController {
   })
   async findByIngredient(@Query('q') ingredient: string): Promise<Recipe[]> {
     return this.recipesService.findByIngredient(ingredient);
+  }
+
+  // AI를 활용한 레시피 생성
+  @Post('generate-ai')
+  @ApiOperation({
+    summary: 'AI를 활용한 레시피 생성',
+    description: '재료 목록을 기반으로 AI가 레시피를 자동 생성합니다.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'AI 레시피 생성 성공',
+    type: AIRecipeResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: '잘못된 요청 (재료 목록 누락 등)',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'AI 서비스 호출 실패',
+  })
+  async generateWithAI(
+    @Body() generateRecipeDto: GenerateRecipeDto,
+  ): Promise<AIRecipeResponseDto> {
+    return this.recipesService.generateRecipeWithAI(
+      generateRecipeDto.ingredients,
+      generateRecipeDto.preferences,
+      generateRecipeDto.provider,
+    );
   }
 }

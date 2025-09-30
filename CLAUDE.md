@@ -286,10 +286,24 @@ project/                        # 모노레포 루트
 
 ### 개발 방법론 (학습 목적)
 ⚠️ **중요**: 이 프로젝트는 학습용이므로 다음 규칙을 준수
-- **Claude는 코드를 직접 작성하지 않음**
-- **Claude는 가이드와 설명만 제공**
-- **사용자가 직접 코드를 타이핑하여 학습**
-- **코드 제공 방식**: Claude가 코드 블록으로 제공하면 사용자가 파일에 직접 복사하여 작성
+
+**코드 작성 원칙:**
+- **Claude는 코드를 직접 수정하지 않음**
+- **Claude는 가이드와 코드 예시만 제공**
+- **사용자가 직접 코드를 작성하여 학습**
+- **코드 제공 방식**:
+  - Claude가 코드 블록으로 제공
+  - 어느 파일에 어떤 코드를 어떻게 넣어야 하는지 명확히 설명
+  - 사용자가 파일에 직접 작성
+  - 작업 완료 후 사용자가 Claude에게 검토 요청
+
+**작업 플로우:**
+1. Claude가 작업 가이드 및 코드 예시 제공
+2. 사용자가 직접 코드 작성
+3. 사용자가 "작업 완료했어, 검토해줘" 요청
+4. Claude가 코드 검토 및 피드백 제공
+5. 다음 단계 진행
+
 - 단계별 진행하며 각 단계 완료 후 다음 단계로 진행
 ### AI Service 개발 완료 현황 (2024-09-30)
 
@@ -319,6 +333,14 @@ project/                        # 모노레포 루트
 - **.env 설정**: OpenAI API 키 설정 및 환경변수 관리
 - **실제 테스트**: Swagger UI를 통한 AI 레시피 생성 성공
 
+✅ **NestJS ↔ FastAPI 마이크로서비스 통합 완료** (2024-09-30) 🎊
+- **RecipesModule**: HttpModule 추가 및 의존성 주입
+- **RecipesService**: FastAPI 호출 로직 구현 (HttpService + ConfigService)
+- **DTO 타입 안전성**: any 제거, 명시적 타입 정의 (GenerateRecipeDto, AIRecipeResponseDto)
+- **RecipesController**: POST /recipes/generate-ai 엔드포인트 추가
+- **환경변수 설정**: AI_SERVICE_URL 추가
+- **실제 통신 테스트**: NestJS → FastAPI → OpenAI 완전 검증 성공
+
 🎯 **AI 서비스 현재 상태**
 - ✅ 기본 구조 완성 (config.py, ai_client.py, schemas.py, generate.py, main.py)
 - ✅ OpenAI GPT-3.5-turbo API 연동 완료 및 테스트 성공
@@ -327,7 +349,7 @@ project/                        # 모노레포 루트
 - ✅ FastAPI 애플리케이션 통합 및 서버 실행 완료
 - ✅ 환경변수 설정 및 실제 AI API 호출 검증 완료
 - ✅ Swagger UI를 통한 API 테스트 환경 구축
-- ⏳ NestJS와 FastAPI 마이크로서비스 통합 (다음 단계)
+- ✅ **NestJS와 FastAPI 마이크로서비스 통합 완료**
 
 📋 **개발 전략**
 **1단계: FastAPI 독립 개발 및 테스트** ✅ **완료!**
@@ -336,19 +358,25 @@ project/                        # 모노레포 루트
 - ✅ 클라이언트가 직접 FastAPI 호출하는 구조
 - ✅ OpenAI API 연동 및 실제 레시피 생성 성공
 
-**2단계: NestJS 통합 및 리팩토링** (다음 진행 예정)
-- [ ] NestJS RecipesController 추가
-- [ ] FastAPI를 내부 마이크로서비스로 전환
-- [ ] NestJS → FastAPI 통신 구조로 변경
-- [ ] 엔드포인트: `/api/recipes/generate` → `/internal/ai/generate`
-- [ ] HttpService/axios를 통한 마이크로서비스 통신 구현
+**2단계: NestJS 통합 및 마이크로서비스 통신** ✅ **완료!**
+- ✅ NestJS RecipesModule에 HttpModule 추가
+- ✅ RecipesService에서 FastAPI 호출 로직 구현
+- ✅ DTO 타입 안전성 확보 (any 제거)
+- ✅ RecipesController 엔드포인트 추가 (POST /recipes/generate-ai)
+- ✅ 환경변수 설정 (AI_SERVICE_URL)
+- ✅ 실제 마이크로서비스 통신 테스트 성공
+
+**3단계: Frontend 통합** (다음 진행 예정)
+- [ ] Next.js에서 NestJS API 호출
+- [ ] AI 레시피 생성 UI 구현
+- [ ] 사용자 경험 개선
 
 🔄 **다음 단계**
-- [ ] NestJS main-service에 RecipesModule 생성
-- [ ] NestJS에서 FastAPI 호출하는 Service 구현
-- [ ] 마이크로서비스 간 통신 테스트
-- [ ] 에러 처리 및 타임아웃 설정
-- [ ] Frontend에서 NestJS API 호출하도록 연동
+- [ ] Frontend에서 POST /recipes/generate-ai 호출
+- [ ] AI 레시피 생성 페이지 UI/UX 구현
+- [ ] 생성된 레시피 DB 저장 기능 (선택 사항)
+- [ ] 에러 처리 개선 (타임아웃, 재시도)
+- [ ] 프로덕션 배포 준비
 
 💻 **개발 환경 명령어**
 ```bash
