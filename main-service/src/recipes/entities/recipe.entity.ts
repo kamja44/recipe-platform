@@ -59,6 +59,6 @@ export class Recipe {
   @JoinColumn({ name: 'userId' })
   user: User;
 
-  @Column()
+  @Column({ nullable: true })
   userId: number;
 }

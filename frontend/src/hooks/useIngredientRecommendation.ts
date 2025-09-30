@@ -1,24 +1,56 @@
 "use client";
 
-import { generateRecipe } from "@/lib/api/recipes";
-import { RecipeData } from "@/types/recipe";
+import { generateRecipe, saveRecipe } from "@/lib/api/recipes";
+import { CreateRecipeRequest, RecipeData } from "@/types/recipe";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
+
+// RecipeData를 CreateRecipeRequest로 변환하는 함수
+function convertToCreateRecipeRequest(
+  recipeData: RecipeData
+): CreateRecipeRequest {
+  // cooking_time에서 숫자 추출
+  const cookTimeMatch = recipeData.cooking_time.match(/\d+/);
+  const cookTime = cookTimeMatch ? parseInt(cookTimeMatch[0]) : undefined;
+
+  return {
+    title: recipeData.recipe_name,
+    description: `${recipeData.difficulty} 난이도의 레시피입니다.`,
+    ingredients: recipeData.ingredients_list,
+    instructions: recipeData.instructions,
+    difficulty: recipeData.difficulty,
+    cookTime: cookTime,
+    servings: 2, // 기본값
+    category: "AI 생성", // 기본값
+  };
+}
 
 export function useIngredientRecommendation() {
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [currentIngredient, setCurrentIngredient] = useState("");
   const [recipes, setRecipes] = useState<RecipeData[]>([]);
 
-  const mutation = useMutation({
+  // AI 레시피 생성 mutation
+  const generateMutation = useMutation({
     mutationFn: generateRecipe,
     onSuccess: (data) => {
-      // API 응답에서 레시피 데이터 추출
       setRecipes([data.data]);
     },
     onError: (error) => {
       console.error("레시피 생성 실패: ", error);
       alert("레시피 생성에 실패했습니다. 다시 시도해주세요.");
+    },
+  });
+
+  // 레시피 저장 mutation
+  const saveMutation = useMutation({
+    mutationFn: saveRecipe,
+    onSuccess: () => {
+      alert("레시피가 성공적으로 저장되었습니다!");
+    },
+    onError: (error) => {
+      console.error("레시피 저장 실패: ", error);
+      alert("레시피 저장에 실패했습니다. 다시 시도해주세요.");
     },
   });
 
@@ -41,22 +73,29 @@ export function useIngredientRecommendation() {
       return;
     }
 
-    mutation.mutate({
+    generateMutation.mutate({
       ingredients,
       provider: "openai",
     });
+  };
+
+  const handleSaveRecipe = (recipe: RecipeData) => {
+    const createRecipeRequest = convertToCreateRecipeRequest(recipe);
+    saveMutation.mutate(createRecipeRequest);
   };
 
   return {
     // 상태
     ingredients,
     currentIngredient,
-    isLoading: mutation.isPending, // TanStack Query의 로딩 상태
+    isLoading: generateMutation.isPending, // TanStack Query의 로딩 상태
+    isSaving: saveMutation.isPending,
     recipes,
     // 액션
     setCurrentIngredient,
     addIngredient,
     removeIngredient,
     getRecommendations,
+    handleSaveRecipe,
   };
 }

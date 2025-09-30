@@ -50,14 +50,18 @@ def parse_ai_response(response: str) -> dict:
     result["recipe_name"]=  name_match.group(1).strip() if name_match else "알 수 없는 요리"
 
     # 재료 추출
-    ingredients_match = re.search(r'재료:\s*(.*?)(?=조리법|만드는법|조리순서)',response, re.DOTALL)
+    ingredients_match = re.search(r'재료:\s*(.*?)(?=조리법|만드는법|조리순서)', response, re.DOTALL)
     if ingredients_match:
-        ingredients_text=ingredients_match.group(1).strip()
-        result["ingredients"] = [
-            ing.strip() 
-            for ing in ingredients_text.split('\n') 
-            if ing.strip() and ing.strip() != "-"
-            ]
+        ingredients_text = ingredients_match.group(1).strip()
+        
+        # 줄바꿈으로 분리 시도
+        lines = [ing.strip() for ing in ingredients_text.split('\n') if ing.strip() and ing.strip() != "-"]
+        
+        # 줄바꿈이 없고 쉼표가 있으면 쉼표로 분리
+        if len(lines) == 1 and ',' in lines[0]:
+            result["ingredients"] = [ing.strip() for ing in lines[0].split(',') if ing.strip()]
+        else:
+            result["ingredients"] = lines
     else:
         result["ingredients"] = []
 

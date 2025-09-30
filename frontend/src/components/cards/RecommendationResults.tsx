@@ -14,6 +14,8 @@ import { RecipeList } from "./RecipeList";
 export function RecommendationResults({
   recipes,
   isLoading,
+  onSaveRecipe,
+  isSaving,
 }: RecommendationResultsProps) {
   if (recipes.length === 0 && !isLoading) {
     return (
@@ -47,7 +49,11 @@ export function RecommendationResults({
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
           </LoadingState>
         ) : (
-          <RecipeList recipes={recipes} />
+          <RecipeList
+            recipes={recipes}
+            onSaveRecipe={onSaveRecipe}
+            isSaving={isSaving}
+          />
         )}
       </CardContent>
     </Card>

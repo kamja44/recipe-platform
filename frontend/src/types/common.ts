@@ -1,3 +1,5 @@
+import { RecipeData } from "./recipe";
+
 export interface FeatureCard {
   emoji: string;
   title: string;
@@ -31,8 +33,10 @@ export interface IngredientsInputProps {
 }
 
 export interface RecommendationResultsProps {
-  recipes: Recipe[];
+  recipes: RecipeData[];
   isLoading: boolean;
+  onSaveRecipe?: (recipe: RecipeData) => void;
+  isSaving?: boolean;
 }
 
 export interface RecipeListItem {

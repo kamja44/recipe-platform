@@ -21,3 +21,30 @@ export interface RecipeData {
   difficulty: string;
   raw_response: string;
 }
+
+// 레시피 저장 요청 DTO
+export interface CreateRecipeRequest {
+  title: string;
+  description: string;
+  ingredients: string[];
+  instructions: string[];
+  difficulty?: string;
+  cookTime?: number;
+  servings?: number;
+  category?: string;
+}
+
+// 저장된 레시피 응답
+export interface SavedRecipe {
+  id: number;
+  title: string;
+  description: string;
+  ingredients: string[];
+  instructions: string[];
+  difficulty?: string;
+  cookTime?: number;
+  servings?: number;
+  category?: string;
+  createdAt: string;
+  updatedAt: string;
+}

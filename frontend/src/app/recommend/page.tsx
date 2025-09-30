@@ -10,11 +10,13 @@ export default function RecommendPage() {
     ingredients,
     currentIngredient,
     isLoading,
+    isSaving,
     recipes,
     setCurrentIngredient,
     addIngredient,
     removeIngredient,
     getRecommendations,
+    handleSaveRecipe,
   } = useIngredientRecommendation();
 
   return (
@@ -37,7 +39,12 @@ export default function RecommendPage() {
           isLoading={isLoading}
         />
 
-        <RecommendationResults recipes={recipes} isLoading={isLoading} />
+        <RecommendationResults
+          recipes={recipes}
+          isLoading={isLoading}
+          onSaveRecipe={handleSaveRecipe}
+          isSaving={isSaving}
+        />
       </div>
     </div>
   );
