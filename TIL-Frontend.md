@@ -1959,14 +1959,406 @@ FastAPI → NestJS → Frontend
 
 ---
 
+---
+
+## 📝 레시피 저장 및 목록 기능 구현 (2024-09-30)
+
+### 🎯 구현 목표
+AI로 생성한 레시피를 데이터베이스에 저장하고, 저장된 레시피 목록을 조회하는 기능 구현
+
+---
+
+### 1. 레시피 저장 기능 구현
+
+#### 📚 학습한 핵심 개념
+
+**1. useMutation을 활용한 데이터 변경**
+```typescript
+const saveMutation = useMutation({
+  mutationFn: saveRecipe,
+  onSuccess: () => {
+    alert("레시피가 성공적으로 저장되었습니다!");
+  },
+  onError: (error) => {
+    console.error("레시피 저장 실패:", error);
+    alert("레시피 저장에 실패했습니다.");
+  },
+});
+```
+
+**useMutation의 특징:**
+- **데이터 변경 작업**: POST, PUT, DELETE 요청에 특화
+- **자동 상태 관리**: `isPending`, `isSuccess`, `isError` 자동 제공
+- **콜백 함수**: `onSuccess`, `onError`로 성공/실패 처리
+- **수동 실행**: `mutation.mutate(data)` 호출 시에만 실행
+
+**2. 데이터 변환 로직**
+```typescript
+function convertToCreateRecipeRequest(recipeData: RecipeData): CreateRecipeRequest {
+  const cookTimeMatch = recipeData.cooking_time.match(/\d+/);
+  const cookTime = cookTimeMatch ? parseInt(cookTimeMatch[0]) : undefined;
+
+  return {
+    title: recipeData.recipe_name,
+    description: `${recipeData.difficulty} 난이도의 레시피입니다.`,
+    ingredients: recipeData.ingredients_list,
+    instructions: recipeData.instructions,
+    difficulty: recipeData.difficulty,
+    cookTime: cookTime,
+    servings: 2,
+    category: "AI 생성",
+  };
+}
+```
+
+**변환 로직의 필요성:**
+- AI 응답 형식 (`RecipeData`)과 Backend DTO (`CreateRecipeRequest`) 형식이 다름
+- 정규표현식으로 조리시간 추출 (`"10분"` → `10`)
+- 기본값 설정 (servings, category)
+
+**3. Props 타입 재사용**
+
+❌ **잘못된 방식** (새로운 타입 정의):
+```typescript
+// RecommendationResults.tsx에 직접 정의
+interface RecommendationResultsProps {
+  recipes: RecipeData[];
+  isLoading: boolean;
+  onSaveRecipe?: (recipe: RecipeData) => void;
+  isSaving?: boolean;
+}
+```
+
+✅ **올바른 방식** (기존 타입 확장):
+```typescript
+// types/common.ts 수정
+export interface RecommendationResultsProps {
+  recipes: RecipeData[];
+  isLoading: boolean;
+  onSaveRecipe?: (recipe: RecipeData) => void;  // 추가
+  isSaving?: boolean;                            // 추가
+}
+```
+
+**타입 재사용의 이점:**
+- DRY 원칙 준수 (Don't Repeat Yourself)
+- 타입 일관성 유지
+- 중앙 집중식 타입 관리
+
+#### 🔧 구현 단계
+
+**1. 타입 정의** ([types/recipe.ts](frontend/src/types/recipe.ts))
+```typescript
+// 레시피 저장 요청 DTO
+export interface CreateRecipeRequest {
+  title: string;
+  description: string;
+  ingredients: string[];
+  instructions: string[];
+  difficulty?: string;
+  cookTime?: number;
+  servings?: number;
+  category?: string;
+}
+
+// 저장된 레시피 응답
+export interface SavedRecipe {
+  id: number;
+  title: string;
+  description: string;
+  ingredients: string[];
+  instructions: string[];
+  difficulty?: string;
+  cookTime?: number;
+  servings?: number;
+  category?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+**2. API 함수 추가** ([lib/api/recipes.ts](frontend/src/lib/api/recipes.ts))
+```typescript
+export const saveRecipe = async (
+  data: CreateRecipeRequest
+): Promise<SavedRecipe> => {
+  const response = await apiClient.post<SavedRecipe>("/recipes", data);
+  return response.data;
+};
+```
+
+**3. useMutation 구현** ([hooks/useIngredientRecommendation.ts](frontend/src/hooks/useIngredientRecommendation.ts))
+- `generateMutation`: AI 레시피 생성
+- `saveMutation`: 레시피 저장
+- `handleSaveRecipe`: 저장 로직 (데이터 변환 + mutation 실행)
+
+**4. UI 버튼 추가** ([components/cards/RecipeList.tsx](frontend/src/components/cards/RecipeList.tsx))
+```typescript
+{onSaveRecipe && (
+  <Button
+    onClick={() => onSaveRecipe(recipe)}
+    disabled={isSaving}
+    size="sm"
+    variant="outline"
+  >
+    <Save className="h-4 w-4 mr-2" />
+    {isSaving ? "저장 중..." : "저장"}
+  </Button>
+)}
+```
+
+**5. Props 와이어링**
+```
+page.tsx (최상위)
+  ↓ onSaveRecipe={handleSaveRecipe}, isSaving={isSaving}
+RecommendationResults
+  ↓ onSaveRecipe, isSaving
+RecipeList
+  ↓ onClick={() => onSaveRecipe(recipe)}
+Button (저장 버튼)
+```
+
+#### ⚠️ 트러블슈팅
+
+**문제 1: 400 에러 - 재료 형식 불일치**
+```json
+// 잘못된 형식 (단일 문자열)
+{
+  "ingredients": ["토마토, 양파, 베이컨"]
+}
+
+// 올바른 형식 (배열)
+{
+  "ingredients": ["토마토", "양파", "베이컨"]
+}
+```
+
+**원인:** FastAPI가 쉼표로 구분된 재료를 단일 문자열로 반환
+**해결:** FastAPI 파싱 로직에 쉼표 구분 처리 추가
+
+**문제 2: 500 에러 - userId NOT NULL 제약**
+```
+QueryFailedError: null value in column "userId" violates not-null constraint
+```
+
+**원인:** Recipe Entity에서 userId가 필수였지만 인증 시스템이 아직 없음
+**해결 1단계:** Entity 수정 (`@Column({ nullable: true })`)
+**문제점:** TypeORM `synchronize: true`가 기존 제약 조건 수정 안 함
+**해결 2단계:** 테이블 재생성
+```bash
+docker exec -it postgres psql -U postgres -d recipe_platform
+DROP TABLE recipes CASCADE;
+# NestJS 재시작 → 테이블 자동 재생성
+```
+
+---
+
+### 2. 레시피 목록 페이지 구현
+
+#### 📚 커스텀 훅 패턴의 중요성
+
+**잘못된 접근 (페이지 내 useQuery):**
+```typescript
+// ❌ 페이지 컴포넌트에 직접 작성
+export default function RecipesPage() {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["recipes"],
+    queryFn: () => getRecipes(1, 20),
+  });
+}
+```
+
+**사용자 피드백:**
+> "지금 페이지 안에서 useQuery를 선언해서 사용하는데 이것보단, lib/api에 폴더를 만들어서 사용하는게 더 좋은 방안 아니니?"
+
+**올바른 접근 (커스텀 훅 분리):**
+```typescript
+// ✅ hooks/useRecipes.ts
+export function useRecipes(page = 1, limit = 20) {
+  return useQuery({
+    queryKey: ["recipes", page, limit],
+    queryFn: () => getRecipes(page, limit),
+    staleTime: 60 * 1000,
+  });
+}
+
+// ✅ 페이지 컴포넌트
+const { data, isLoading, error } = useRecipes(1, 20);
+```
+
+**커스텀 훅의 이점:**
+1. **관심사 분리**: API 로직을 페이지에서 분리
+2. **재사용성**: 다른 컴포넌트에서도 사용 가능
+3. **테스트 용이성**: 독립적으로 테스트 가능
+4. **일관성**: 기존 `useIngredientRecommendation` 패턴과 동일
+
+#### 🏗️ 폴더 구조 선택
+
+**옵션 1: `hooks/` 폴더** ✅ 선택
+```
+src/
+├── hooks/
+│   ├── useIngredientRecommendation.ts
+│   └── useRecipes.ts
+```
+
+**옵션 2: `lib/api/hooks/` 폴더**
+```
+src/
+├── lib/
+│   └── api/
+│       ├── client.ts
+│       ├── recipes.ts
+│       └── hooks/
+│           └── useRecipes.ts
+```
+
+**선택 이유:**
+- 기존 프로젝트 구조와 일관성 (`hooks/` 폴더 이미 존재)
+- React 커뮤니티 관례 (`hooks/` 최상위 배치)
+- 간단한 경로 (`@/hooks/useRecipes`)
+
+#### 🔧 구현 내용
+
+**1. 커스텀 훅 생성** ([hooks/useRecipes.ts](frontend/src/hooks/useRecipes.ts))
+```typescript
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { getRecipes } from "@/lib/api/recipes";
+
+export function useRecipes(page = 1, limit = 20) {
+  return useQuery({
+    queryKey: ["recipes", page, limit],
+    queryFn: () => getRecipes(page, limit),
+    staleTime: 60 * 1000, // 1분간 캐시 유효
+  });
+}
+```
+
+**queryKey의 중요성:**
+- `["recipes", page, limit]`: 캐시 식별자
+- page나 limit이 바뀌면 새로운 쿼리로 인식
+- 동일한 조건이면 캐시에서 즉시 반환
+
+**2. 페이지 컴포넌트 수정** ([app/recipes/page.tsx](frontend/src/app/recipes/page.tsx))
+```typescript
+"use client";
+
+import { useRecipes } from "@/hooks/useRecipes";
+
+export default function RecipesPage() {
+  const { data, isLoading, error } = useRecipes(1, 20);
+  const recipes = data?.data || [];
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      {isLoading && <LoadingState />}
+      {error && <EmptyState message="레시피를 불러오는데 실패했습니다." />}
+      {!isLoading && !error && recipes.length > 0 && (
+        <RecipeGrid recipes={recipes} />
+      )}
+      {!isLoading && !error && recipes.length === 0 && (
+        <EmptyState message="아직 저장된 레시피가 없습니다." />
+      )}
+    </div>
+  );
+}
+```
+
+**3. RecipeGrid 타입 수정** ([components/recipe/RecipeGrid.tsx](frontend/src/components/recipe/RecipeGrid.tsx))
+
+**문제:** 타입 불일치
+```typescript
+// RecipeGrid가 기대하는 타입
+interface RecipeListItem {
+  image: string;  // 필수
+  // ...
+}
+
+// API가 반환하는 타입
+interface SavedRecipe {
+  // image 필드 없음
+  // ...
+}
+```
+
+**해결:** RecipeGrid를 SavedRecipe 타입으로 변경
+```typescript
+import { SavedRecipe } from "@/types/recipe";
+
+interface RecipeGridProps {
+  recipes: SavedRecipe[];  // RecipeListItem[] → SavedRecipe[]
+}
+
+// 이미지 대신 이모지 사용
+<div className="text-6xl text-center mb-4">👨‍🍳</div>
+```
+
+#### 🎨 UI/UX 개선
+
+**1. 로딩 상태**
+```typescript
+{isLoading && (
+  <LoadingState message="레시피를 불러오는 중...">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
+  </LoadingState>
+)}
+```
+
+**2. 에러 상태**
+```typescript
+{error && (
+  <EmptyState message="레시피를 불러오는데 실패했습니다.">
+    <ChefHat className="h-12 w-12 mx-auto mb-4 opacity-50" />
+  </EmptyState>
+)}
+```
+
+**3. 빈 상태**
+```typescript
+{recipes.length === 0 && (
+  <EmptyState message="아직 저장된 레시피가 없습니다. AI 추천 페이지에서 레시피를 생성하고 저장해보세요!">
+    <ChefHat className="h-12 w-12 mx-auto mb-4 opacity-50" />
+  </EmptyState>
+)}
+```
+
+---
+
+### 💡 핵심 학습 정리
+
+**1. TanStack Query 패턴**
+- `useQuery`: 데이터 조회 (GET)
+- `useMutation`: 데이터 변경 (POST, PUT, DELETE)
+- 커스텀 훅으로 분리하여 재사용성 향상
+
+**2. 타입 안전성**
+- Backend DTO와 Frontend 타입 명확히 구분
+- 데이터 변환 함수로 타입 불일치 해결
+- 기존 타입 재사용으로 일관성 유지
+
+**3. 에러 처리**
+- API 에러: try-catch + alert
+- TypeORM 제약 조건: Entity 수정 + 테이블 재생성
+- 타입 불일치: 타입 변경 + UI 조정
+
+**4. 코드 구조**
+- 커스텀 훅: API 로직 분리
+- 공통 컴포넌트: LoadingState, EmptyState 재활용
+- Props 타입: 중앙 집중식 관리
+
+---
+
 ## 다음 학습 목표
 
 - [x] 클라이언트 컴포넌트 vs 서버 컴포넌트 ✅
 - [x] 하이드레이션 개념 ✅
 - [x] 페이지 라우팅 추가 (recipes, recommend 등) ✅
 - [x] 동적 라우팅 ([id] 폴더 구조) ✅
-- [ ] SOLID 원칙 기반 컴포넌트 리팩토링 🔄
+- [x] SOLID 원칙 기반 컴포넌트 리팩토링 ✅
 - [x] Axios vs TanStack Query 이해 ✅
 - [x] API 연동 (Axios + TanStack Query) ✅
 - [x] Frontend-Backend 완전 통합 ✅
+- [x] 레시피 저장 및 목록 기능 ✅
 - [ ] 사용자 인증 시스템

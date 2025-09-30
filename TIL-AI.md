@@ -1618,3 +1618,177 @@ ai-service/
 
 🎉 **다음 단계: NestJS와 FastAPI 마이크로서비스 통합!**
 
+---
+
+## 📝 FastAPI 파싱 로직 개선 - 쉼표 구분 재료 지원 (2024-09-30)
+
+### 🎯 문제 상황
+Frontend에서 AI 생성 레시피를 저장하려 할 때 400 Bad Request 에러 발생
+
+#### 에러 원인 분석
+```json
+// AI가 반환한 재료 (쉼표로 구분)
+"재료: 토마토, 양파, 베이컨, 식용유, 소금, 후추"
+
+// FastAPI 파싱 결과 (단일 문자열)
+{
+  "ingredients": ["토마토, 양파, 베이컨, 식용유, 소금, 후추"]
+}
+
+// NestJS CreateRecipeDto 기대 형식 (개별 문자열 배열)
+{
+  "ingredients": ["토마토", "양파", "베이컨", "식용유", "소금", "후추"]
+}
+```
+
+**문제:**
+- FastAPI 파싱 로직이 줄바꿈(`\n`)만 처리
+- AI가 쉼표로 구분된 재료를 반환하면 단일 문자열로 처리됨
+- NestJS 검증 실패 (배열 형태가 아님)
+
+---
+
+### 🔧 파싱 로직 개선
+
+#### 파일 위치
+`ai-service/app/api/recipes/generate.py` (lines 52-62)
+
+#### 기존 코드 (문제점)
+```python
+# 재료 추출 - 줄바꿈만 지원
+ingredients_match = re.search(r'재료:\s*(.*?)(?=조리법)', response, re.DOTALL)
+if ingredients_match:
+    ingredients_text = ingredients_match.group(1).strip()
+    result["ingredients"] = [
+        ing.strip()
+        for ing in ingredients_text.split('\n')  # 줄바꿈으로만 분리
+        if ing.strip()
+    ]
+```
+
+**한계:**
+- 줄바꿈 구분만 처리
+- 쉼표로 구분된 재료는 단일 문자열로 반환
+
+#### 개선된 코드 (해결)
+```python
+# 재료 추출 - 줄바꿈 + 쉼표 구분 모두 지원
+ingredients_match = re.search(
+    r'재료:\s*(.*?)(?=조리법|만드는법|조리순서)',
+    response,
+    re.DOTALL
+)
+
+if ingredients_match:
+    ingredients_text = ingredients_match.group(1).strip()
+
+    # 1단계: 줄바꿈으로 분리 시도
+    lines = [
+        ing.strip()
+        for ing in ingredients_text.split('\n')
+        if ing.strip() and ing.strip() != "-"
+    ]
+
+    # 2단계: 줄바꿈이 없고 쉼표가 있으면 쉼표로 분리
+    if len(lines) == 1 and ',' in lines[0]:
+        result["ingredients"] = [
+            ing.strip()
+            for ing in lines[0].split(',')
+            if ing.strip()
+        ]
+    else:
+        result["ingredients"] = lines
+else:
+    result["ingredients"] = []
+```
+
+#### 개선 사항
+1. **스마트 파싱**: 줄바꿈 우선 → 쉼표 대체
+2. **다양한 형식 지원**: AI 응답 변동성 대응
+3. **불필요한 문자 제거**: `-` 기호 필터링
+4. **빈 배열 기본값**: 안전한 fallback
+
+---
+
+### 🧪 테스트 케이스
+
+#### 케이스 1: 줄바꿈 형식 (기존 동작 유지)
+```
+재료:
+- 토마토 2개
+- 양파 1개
+- 베이컨 3줄
+```
+
+**파싱 결과:**
+```python
+["토마토 2개", "양파 1개", "베이컨 3줄"]
+```
+
+#### 케이스 2: 쉼표 구분 형식 (신규 지원) ✅
+```
+재료: 토마토, 양파, 베이컨, 식용유, 소금, 후추
+```
+
+**파싱 결과:**
+```python
+["토마토", "양파", "베이컨", "식용유", "소금", "후추"]
+```
+
+#### 케이스 3: 혼합 형식
+```
+재료:
+토마토, 양파
+베이컨
+```
+
+**파싱 결과:**
+```python
+["토마토, 양파", "베이컨"]  # 줄바꿈 우선
+```
+
+---
+
+### 💡 학습 포인트
+
+**1. AI 응답의 불확실성 대응**
+- AI는 동일한 프롬프트에도 다양한 형식으로 응답
+- 파싱 로직은 여러 형식을 지원해야 안정적
+
+**2. 방어적 프로그래밍**
+```python
+# 안전한 파싱 전략
+1. 우선 순위 설정 (줄바꿈 > 쉼표)
+2. 조건부 로직으로 다양한 케이스 처리
+3. 빈 배열 기본값으로 에러 방지
+```
+
+**3. 프롬프트 엔지니어링의 한계**
+- 프롬프트로 형식을 강제해도 AI가 항상 따르지 않음
+- **해결책**: 파싱 로직에서 유연하게 처리
+
+**4. 마이크로서비스 간 데이터 검증**
+- FastAPI 응답 → NestJS DTO 검증
+- 중간에 데이터 형식 불일치 발견
+- 양쪽 모두 수정 필요 (FastAPI 파싱 + NestJS 검증)
+
+---
+
+### 🔄 통합 테스트 결과
+
+**Before (에러 발생):**
+```
+POST /recipes/generate-ai
+→ FastAPI 응답: {"ingredients": ["토마토, 양파, 베이컨"]}
+→ NestJS 검증 실패: 400 Bad Request
+```
+
+**After (정상 동작):**
+```
+POST /recipes/generate-ai
+→ FastAPI 응답: {"ingredients": ["토마토", "양파", "베이컨"]}
+→ NestJS 검증 성공: 레시피 저장 완료 ✅
+```
+
+---
+

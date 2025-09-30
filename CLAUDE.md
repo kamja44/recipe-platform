@@ -371,10 +371,22 @@ project/                        # 모노레포 루트
 - [ ] AI 레시피 생성 UI 구현
 - [ ] 사용자 경험 개선
 
+✅ **Frontend 통합 완료** (2024-09-30)
+- ✅ Frontend → NestJS → FastAPI → OpenAI 완전 통합
+- ✅ AI 레시피 생성 페이지 실시간 동작
+- ✅ AI 생성 레시피 DB 저장 기능 구현
+- ✅ 저장된 레시피 목록 조회 페이지 구현
+- ✅ useMutation을 활용한 레시피 저장 기능
+- ✅ useQuery를 활용한 레시피 목록 조회
+- ✅ 커스텀 훅 분리 (useRecipes)
+- ✅ FastAPI 파싱 로직 개선 (쉼표 구분 재료 지원)
+- ✅ TypeORM Entity userId nullable 처리
+
 🔄 **다음 단계**
-- [ ] Frontend에서 POST /recipes/generate-ai 호출
-- [ ] AI 레시피 생성 페이지 UI/UX 구현
-- [ ] 생성된 레시피 DB 저장 기능 (선택 사항)
+- [ ] 사용자 인증 시스템 (JWT 토큰 Frontend 연동)
+- [ ] 레시피 상세 페이지 실제 데이터 연동
+- [ ] 레시피 수정/삭제 기능
+- [ ] 페이지네이션 구현
 - [ ] 에러 처리 개선 (타임아웃, 재시도)
 - [ ] 프로덕션 배포 준비
 
