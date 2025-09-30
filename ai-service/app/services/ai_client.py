@@ -1,10 +1,10 @@
 from typing import List, Optional
-import openai
-from anthropic import Anthropic
+from openai import AsyncOpenAI
+from anthropic import AsyncAnthropic
 from app.core.config import settings
 
 # 공통 프롬프트 빌더 함수
-def build_recipe_prompt(ingredients: List[str], preferences:Optional[str] = None) -> str:
+def build_recipe_prompt(ingredients: List[str], preferences: Optional[str] = None) -> str:
     """레시피 생성 프롬프트 구성 (공통 함수)"""
     ingredients_text = ", ".join(ingredients)
     prompt = f"당신은 30년 경력의 전문 요리사이며, 미슐랭 3스타 헤드 셰프입니다. 다음 재료들을 사용한 레시피를 추천해주세요: {ingredients_text}"
@@ -17,20 +17,19 @@ def build_recipe_prompt(ingredients: List[str], preferences:Optional[str] = None
 
 class OpenAIClient:
     def __init__(self):
-        if settings.openai_api_key:
-            openai.api_key = settings.openai_api_key
+        if not settings.openai_api_key:
+            raise ValueError("OpenAI API 키가 설정되지 않았습니다.")
+        self.client = AsyncOpenAI(api_key=settings.openai_api_key)
+    
     async def generate_recipe(self, ingredients: List[str], preferences: Optional[str] = None) -> str:
         """재료 기반 레시피 생성"""
-        if not settings.openai_api_key:
-            raise ValueError("OpenAI API key not configured")
-
         prompt = build_recipe_prompt(ingredients, preferences)
 
         try:
-            response = await openai.ChatCompletion.acreate(
+            response = await self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
-                    {"role": "system", "content": "당신은 30년 경력의 전문 요리사이며 미슐랭 3스타의 헤드 셰프 입니다. 주어진 재료로 맛있는 레시피를 추천해주세요."},
+                    {"role": "system", "content": "당신은 30년 경력의 전문 요리사이며 미슐랭 3스타의 헤드 셰프입니다. 주어진 재료로 맛있는 레시피를 추천해주세요."},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=1000,
@@ -38,26 +37,22 @@ class OpenAIClient:
             )
             return response.choices[0].message.content
         except Exception as e:
-            raise Exception(f"OpenAI API 호출 실패:{str(e)}")
+            raise Exception(f"OpenAI API 호출 실패: {str(e)}")
     
 
 class ClaudeClient:
     def __init__(self):
-        if settings.anthropic_api_key:
-            self.client = Anthropic(api_key=settings.anthropic_api_key)
-        else:
-            self.client = None
+        if not settings.anthropic_api_key:
+            raise ValueError("Claude API 키가 설정되지 않았습니다.")
+        self.client = AsyncAnthropic(api_key=settings.anthropic_api_key)
     
-    async def generate_recipe(self, ingredients: List[str], preferences: Optional[str]=None) -> str:
+    async def generate_recipe(self, ingredients: List[str], preferences: Optional[str] = None) -> str:
         """재료 기반 레시피 생성"""
-        if not self.client:
-            raise ValueError("Claude API key not configured")
-        
         prompt = build_recipe_prompt(ingredients, preferences)
 
         try:
             response = await self.client.messages.create(
-                model="claude-3-sonnet-20240229",
+                model="claude-3-haiku-20240307",  # 더 저렴한 모델
                 max_tokens=1000,
                 messages=[{"role": "user", "content": prompt}]
             )
