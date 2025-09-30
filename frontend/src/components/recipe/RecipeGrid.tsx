@@ -8,10 +8,10 @@ import {
 } from "../ui/card";
 import { Clock, Users } from "lucide-react";
 import { Badge } from "../ui/badge";
-import { RecipeListItem } from "@/types/common";
+import { SavedRecipe } from "@/types/recipe";
 
 interface RecipeGridProps {
-  recipes: RecipeListItem[];
+  recipes: SavedRecipe[];
 }
 
 export function RecipeGrid({ recipes }: RecipeGridProps) {
@@ -21,7 +21,7 @@ export function RecipeGrid({ recipes }: RecipeGridProps) {
         <Link key={recipe.id} href={`/recipes/${recipe.id}`}>
           <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
             <CardHeader>
-              <div className="text-6xl text-center mb-4">{recipe.image}</div>
+              <div className="text-6xl text-center mb-4">👨‍🍳</div>
               <CardTitle className="text-xl">{recipe.title}</CardTitle>
               <CardDescription>{recipe.description}</CardDescription>
             </CardHeader>
