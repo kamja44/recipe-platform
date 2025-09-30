@@ -1,13 +1,26 @@
 "use client";
 
+import { generateRecipe } from "@/lib/api/recipes";
+import { RecipeData } from "@/types/recipe";
+import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { Recipe } from "@/types/common";
 
 export function useIngredientRecommendation() {
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [currentIngredient, setCurrentIngredient] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [recipes, setRecipes] = useState<RecipeData[]>([]);
+
+  const mutation = useMutation({
+    mutationFn: generateRecipe,
+    onSuccess: (data) => {
+      // API 응답에서 레시피 데이터 추출
+      setRecipes([data.data]);
+    },
+    onError: (error) => {
+      console.error("레시피 생성 실패: ", error);
+      alert("레시피 생성에 실패했습니다. 다시 시도해주세요.");
+    },
+  });
 
   const addIngredient = () => {
     if (
@@ -23,40 +36,22 @@ export function useIngredientRecommendation() {
     setIngredients(ingredients.filter((item) => item !== ingredient));
   };
 
-  const getRecommendations = async () => {
-    if (ingredients.length === 0) return;
+  const getRecommendations = () => {
+    if (ingredients.length === 0) {
+      return;
+    }
 
-    setIsLoading(true);
-    // TODO: 실제 API 호출로 교체
-    setTimeout(() => {
-      const mockRecipes: Recipe[] = [
-        {
-          id: 1,
-          title: "감자 베이컨 볶음",
-          description: "감자와 베이컨을 활용한 간단한 요리",
-          cookTime: 20,
-          servings: 2,
-          difficulty: "쉬움",
-        },
-        {
-          id: 2,
-          title: "양파 감자 수프",
-          description: "따뜻하고 든든한 수프 요리",
-          cookTime: 30,
-          servings: 4,
-          difficulty: "보통",
-        },
-      ];
-      setRecipes(mockRecipes);
-      setIsLoading(false);
-    }, 2000);
+    mutation.mutate({
+      ingredients,
+      provider: "openai",
+    });
   };
 
   return {
     // 상태
     ingredients,
     currentIngredient,
-    isLoading,
+    isLoading: mutation.isPending, // TanStack Query의 로딩 상태
     recipes,
     // 액션
     setCurrentIngredient,

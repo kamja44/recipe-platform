@@ -53,7 +53,11 @@ def parse_ai_response(response: str) -> dict:
     ingredients_match = re.search(r'재료:\s*(.*?)(?=조리법|만드는법|조리순서)',response, re.DOTALL)
     if ingredients_match:
         ingredients_text=ingredients_match.group(1).strip()
-        result["ingredients"] = [ing.strip() for ing in ingredients_text.split('\n') if ing.strip()]
+        result["ingredients"] = [
+            ing.strip() 
+            for ing in ingredients_text.split('\n') 
+            if ing.strip() and ing.strip() != "-"
+            ]
     else:
         result["ingredients"] = []
 
@@ -61,7 +65,11 @@ def parse_ai_response(response: str) -> dict:
     instructions_match = re.search(r'(?:조리법|만드는법|조리순서):\s*(.*?)(?=조리시간|난이도|$)', response, re.DOTALL)
     if instructions_match:
         instructions_text = instructions_match.group(1).strip()
-        result["instructions"] = [inst.strip() for inst in instructions_text.split('\n') if inst.strip()]
+        result["instructions"] = [
+            inst.strip() 
+            for inst in instructions_text.split('\n') 
+            if inst.strip() and inst.strip() != "-"
+            ]
     else:
         result["instructions"] = []
     
