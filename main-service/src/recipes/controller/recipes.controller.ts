@@ -10,6 +10,7 @@ import {
   Patch,
   Post,
   Query,
+  Res,
 } from '@nestjs/common';
 import {
   ApiOperation,
@@ -24,11 +25,25 @@ import { CreateRecipeDto } from '../dto/create-recipe.dto';
 import { UpdateRecipeDto } from '../dto/update-recipe.dto';
 import { GenerateRecipeDto } from '../dto/generate-recipe.dto';
 import { AIRecipeResponseDto } from '../dto/ai-recipe-response.dto';
+import { Response } from 'express';
+import { HttpService } from '@nestjs/axios';
+import { ConfigService } from '@nestjs/config';
+import { Readable } from 'stream';
 
 @ApiTags('recipes')
 @Controller('recipes')
 export class RecipesController {
-  constructor(private readonly recipesService: RecipesService) {}
+  private readonly aiServiceUrl: string;
+
+  constructor(
+    private readonly recipesService: RecipesService,
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
+  ) {
+    this.aiServiceUrl =
+      this.configService.get<string>('AI_SERVICE_URL') ||
+      'http://localhost:8000';
+  }
 
   // POST /recipes => 레시피 생성
   @Post()
@@ -84,6 +99,50 @@ export class RecipesController {
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
   ) {
     return this.recipesService.findAll(page, limit);
+  }
+
+  // stream 방식 사용
+  @Get('generate-ai-stream')
+  async generateRecipeStream(
+    @Res() res: Response,
+    @Query() query: Record<string, string>,
+  ): Promise<void> {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    try {
+      const ingredientsJson = query.ingredients;
+      const preferences = query.preferences;
+
+      if (!ingredientsJson) {
+        res.write(
+          `data: ${JSON.stringify({ error: 'ingredients 파라미터가 필요합니다' })}\n\n`,
+        );
+        res.end();
+        return;
+      }
+
+      const ingredients = JSON.parse(ingredientsJson) as string[];
+
+      const response = await this.httpService.axiosRef.post(
+        `${this.aiServiceUrl}/api/recipes/generate-stream`,
+        {
+          ingredients,
+          preferences: preferences || undefined,
+          provider: 'openai',
+        },
+        { responseType: 'stream' },
+      );
+
+      const stream = response.data as Readable;
+      stream.pipe(res);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      res.write(`data: ${JSON.stringify({ error: errorMessage })}\n\n`);
+      res.end();
+    }
   }
 
   // GET /recipes/:id => 특정 레시피 조회

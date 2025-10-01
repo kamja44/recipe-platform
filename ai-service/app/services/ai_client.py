@@ -21,6 +21,22 @@ class OpenAIClient:
             raise ValueError("OpenAI API 키가 설정되지 않았습니다.")
         self.client = AsyncOpenAI(api_key=settings.openai_api_key)
     
+    async def generate_recipe_stream(self, ingredients: List[str], preferences: Optional[str]=None):
+        """스트리밍 방식으로 레시피 생성"""
+        prompt = build_recipe_prompt(ingredients, preferences)
+
+        stream = await self.client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            stream=True, # 스트리밍 활성화
+            temperature=0.7
+        )
+
+        async for chunk in stream:
+            content = chunk.choices[0].delta.content
+            if content:
+                yield content
+
     async def generate_recipe(self, ingredients: List[str], preferences: Optional[str] = None) -> str:
         """재료 기반 레시피 생성"""
         prompt = build_recipe_prompt(ingredients, preferences)
@@ -46,6 +62,18 @@ class ClaudeClient:
             raise ValueError("Claude API 키가 설정되지 않았습니다.")
         self.client = AsyncAnthropic(api_key=settings.anthropic_api_key)
     
+    async def generate_recipe_stream(self, ingredients: List[str], preferences: Optional[str]=None):
+        """스트리밍 방식으로 레시피 생성"""
+        prompt = build_recipe_prompt(ingredients, preferences)
+        
+        async for chunk in self.client.messages.stream(
+            model="claude-3-haiku-20240307",
+            max_tokens=1000,
+            messages=[{"role": "user", "content": prompt}]
+        ):
+            if chunk.type == "content_block_delta":
+                yield chunk.delta.text
+
     async def generate_recipe(self, ingredients: List[str], preferences: Optional[str] = None) -> str:
         """재료 기반 레시피 생성"""
         prompt = build_recipe_prompt(ingredients, preferences)

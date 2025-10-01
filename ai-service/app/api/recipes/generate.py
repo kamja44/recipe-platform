@@ -1,7 +1,10 @@
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from app.models.schemas import RecipeRequest, RecipeResponse, APIResponse
 from app.services.ai_client import AIClientFactory
+from app.core.config import settings
 import re
+import json
 
 router = APIRouter(prefix="/api/recipes", tags=["recipes"])
 
@@ -40,6 +43,37 @@ async def generate_recipe(request: RecipeRequest):
           raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
           raise HTTPException(status_code=500, detail=f"레시피 생성 중 오류가 발생했습니다: {str(e)}")
+
+@router.post("/generate-stream")
+async def generate_recipe_stream(request: RecipeRequest):
+    """AI 레시피 스트리밍 생성"""
+
+    async def event_generator():
+        try:
+            client = AIClientFactory.get_client(
+                provider=request.provider
+            )
+
+            # OpenAI 스트리밍 호출
+            async for chunk in client.generate_recipe_stream(
+                ingredients=request.ingredients,
+                preferences=request.preferences
+            ):
+                yield f"data: {json.dumps({'content': chunk}, ensure_ascii=False)}\n\n"
+            
+            yield f"data: {json.dumps({'done': True}, ensure_ascii=False)}\n\n"
+            
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive"
+        }
+    )
 
 def parse_ai_response(response: str) -> dict:
     """AI 응답을 파싱하여 구조화된 데이터로 변환"""

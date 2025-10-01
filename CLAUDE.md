@@ -542,8 +542,52 @@ PasswordField.displayName = "PasswordField";
 - ✅ FastAPI 파싱 로직 개선 (쉼표 구분 재료 지원)
 - ✅ TypeORM Entity userId nullable 처리
 
+✅ **FastAPI AI 서비스 테스트 완료** (2024-10-01)
+- ✅ FastAPI 서버 실행 및 정상 동작 확인
+- ✅ 헬스 체크 엔드포인트 테스트 성공
+- ✅ AI 레시피 생성 API 테스트 성공
+- ✅ Frontend → NestJS → FastAPI → OpenAI 완전 통합 동작 확인
+
+✅ **SSE 스트리밍 통신 구현 완료** (2024-10-01) 🎉
+- **FastAPI SSE 엔드포인트**: `/api/recipes/generate-stream` 구현
+  - `StreamingResponse`로 SSE 형식 응답 (`data: {...}\n\n`)
+  - 비동기 제너레이터 함수 (`async def event_generator()`)
+  - `ensure_ascii=False`로 한글 깨짐 방지
+- **OpenAI 스트리밍 API**: `stream=True` 옵션으로 실시간 응답
+  - `async for chunk in stream` 패턴
+  - `chunk.choices[0].delta.content` 증분 데이터 처리
+- **Claude 스트리밍 API**: `generate_recipe_stream()` 메서드 구현
+- **NestJS 스트리밍 프록시**: GET 요청을 POST로 변환
+  - `@Query()` 전체 객체로 받아 ValidationPipe 우회
+  - `responseType: 'stream'`으로 Axios 스트림 모드
+  - `stream.pipe(res)`로 FastAPI 응답 프록시
+- **Frontend EventSource**: 브라우저 네이티브 SSE 클라이언트
+  - `new EventSource(url)` 자동 GET 요청
+  - `eventSource.onmessage`로 실시간 메시지 수신
+  - `setRecipe((prev) => prev + content)` 누적 업데이트
+- **NestJS 라우트 순서 수정**: 동적 경로(`:id`)를 구체적 경로 뒤로 이동
+- **실시간 UX**: AI 응답이 타이핑되듯 한 글자씩 화면에 표시
+
+🎯 **스트리밍 통신 구조**
+```
+Frontend (EventSource GET)
+    ↓ Query String
+NestJS (프록시: GET → POST 변환)
+    ↓ HTTP Stream
+FastAPI (SSE 응답 생성)
+    ↓ OpenAI Stream
+OpenAI API (GPT-3.5-turbo)
+```
+
+📚 **학습 내용 문서화**
+- ✅ TIL-stream.md 작성 완료
+  - SSE vs WebSocket 비교
+  - 스트리밍 아키텍처 아스키 아트
+  - FastAPI/NestJS/Frontend 상세 코드 분석
+  - NestJS 라우트 순서의 중요성
+  - 비동기 제너레이터, Stream pipe 개념
+
 🔄 **다음 단계**
-- [ ] 사용자 인증 시스템 (JWT 토큰 Frontend 연동)
 - [ ] 레시피 상세 페이지 실제 데이터 연동
 - [ ] 레시피 수정/삭제 기능
 - [ ] 페이지네이션 구현
