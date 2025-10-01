@@ -16,7 +16,7 @@ export class CreateUserDto {
   })
   @IsString({ message: '이른은 문자열이어야 합니다.' })
   @IsNotEmpty({ message: '이름은 필수입니다.' })
-  name: string;
+  username: string;
 
   @ApiProperty({
     example: 'password',

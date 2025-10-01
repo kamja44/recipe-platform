@@ -15,11 +15,13 @@ export const apiClient = axios.create({
 // 요청 인터셉터 (추후 JWT 토큰 추가 예정)
 apiClient.interceptors.request.use(
   (config) => {
-    // 여기서 인증 토큰을 헤더에 추가할 수 있음
-    // const token = localStorage.getItem('token');
-    // if(token){
-    //     config.headers.Authorization = `Bearer ${token}`;
-    // }
+    // localStorage에서 토큰 가져오기
+    const token = localStorage.getItem("access_token");
+
+    // 토큰이 있으면 Authorization 헤덩 ㅔ추가
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => {
@@ -31,11 +33,18 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    // 전역 에러 처리
+    // 401 Unauthorized - 인증 실패
     if (error.response?.status === 401) {
-      // 인증 실패 처리
-      console.error("인증 실패");
+      console.error("인증 실패: 토큰이 만료되었거나 유효하지 않습니다.");
     }
+
+    // 토큰 제거
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user");
+
+    // 로그인 페이지로 리다이렉트
+    window.location.href = "/auth";
+
     return Promise.reject(error);
   }
 );

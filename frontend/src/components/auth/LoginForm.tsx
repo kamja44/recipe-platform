@@ -5,16 +5,33 @@ import { Input } from "../ui/input";
 import { PasswordField } from "./PasswordField";
 import Link from "next/link";
 import { Button } from "../ui/button";
+import { LoginFormData } from "@/types/auth";
+import { useForm } from "react-hook-form";
 
 interface LoginFormProps {
-  onSubmit: (e: React.FormEvent) => void;
+  onSuccess: (data: LoginFormData) => void;
   isLoading: boolean;
 }
 
-export function LoginForm({ onSubmit, isLoading }: LoginFormProps) {
+export function LoginForm({ onSuccess, isLoading }: LoginFormProps) {
+  // React Hook Form - 로그인
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  const onSubmit = (data: LoginFormData) => {
+    onSuccess(data);
+  };
   return (
     <CardContent>
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="email">이메일</Label>
           <div className="relative">
@@ -24,17 +41,37 @@ export function LoginForm({ onSubmit, isLoading }: LoginFormProps) {
               type="email"
               placeholder="example@email.com"
               className="pl-10"
-              required
+              {...register("email", {
+                required: "이메일을 입력해주세요",
+                pattern: {
+                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                  message: "올바른 이메일 형식이 아닙니다",
+                },
+              })}
             />
           </div>
+          {errors.email && (
+            <p className="text-sm text-red-500">{errors.email.message}</p>
+          )}
         </div>
 
-        <PasswordField
-          id="password"
-          label="비밀번호"
-          placeholder="비밀번호를 입력하세요"
-          required
-        />
+        <div className="space-y-2">
+          <Label htmlFor="password">비밀번호</Label>
+          <PasswordField
+            id="password"
+            placeholder="비밀번호를 입력하세요"
+            {...register("password", {
+              required: "비밀번호를 입력해주세요",
+              minLength: {
+                value: 6,
+                message: "비밀번호는 최소 6자 이상이어야 합니다",
+              },
+            })}
+          />
+          {errors.password && (
+            <p className="text-sm text-red-500">{errors.password.message}</p>
+          )}
+        </div>
 
         <div className="flex items-center justify-between text-sm">
           <label className="flex items-center space-x-2">

@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { LoginUserDto } from 'src/users/dto/login-user.dto';
-import { User } from 'src/users/entities/user.entity';
 import { UsersService } from 'src/users/service/users.service';
 import { AuthResponse, JwtPayload } from './auth.types';
 
@@ -20,7 +19,7 @@ export class AuthService {
     const payload: JwtPayload = {
       sub: user.id, // subject: 사용자 ID
       email: user.email,
-      name: user.name,
+      name: user.username,
     };
 
     // JWT 토큰 생성 및 반환

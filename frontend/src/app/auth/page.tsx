@@ -8,28 +8,42 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AuthHeader } from "@/components/auth/AuthHeader";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { SignupForm } from "@/components/auth/SignupForm";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import { LoginFormData, SignupFormData } from "@/types/auth";
 
 export default function AuthPage() {
+  const router = useRouter();
+  const { login, register: registerUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // 로그인 처리
+  const handleLogin = async (data: LoginFormData) => {
     setIsLoading(true);
-    // TODO: 실제 로그인 로직 구현
-    setTimeout(() => {
+
+    try {
+      await login(data.email, data.password);
+      router.push("/");
+    } catch (error) {
+      alert("로그인 실패: " + (error as Error).message);
+    } finally {
       setIsLoading(false);
-      alert("로그인 성공! (더미)");
-    }, 1500);
+    }
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // 회원가입 처리
+  const handleSignup = async (data: SignupFormData) => {
     setIsLoading(true);
-    // TODO: 실제 회원가입 로직 구현
-    setTimeout(() => {
+
+    try {
+      await registerUser(data.email, data.username, data.password);
+      alert("회원가입 및 로그인 성공!");
+      router.push("/");
+    } catch (error) {
+      alert("회원가입 실패: " + (error as Error).message);
+    } finally {
       setIsLoading(false);
-      alert("회원가입 성공! (더미)");
-    }, 1500);
+    }
   };
 
   return (
@@ -51,12 +65,12 @@ export default function AuthPage() {
 
             {/* 로그인 탭 */}
             <TabsContent value="login">
-              <LoginForm onSubmit={handleLogin} isLoading={isLoading} />
+              <LoginForm onSuccess={handleLogin} isLoading={isLoading} />
             </TabsContent>
 
             {/* 회원가입 탭 */}
             <TabsContent value="signup">
-              <SignupForm onSubmit={handleSignup} isLoading={isLoading} />
+              <SignupForm onSuccess={handleSignup} isLoading={isLoading} />
             </TabsContent>
           </Tabs>
         </Card>

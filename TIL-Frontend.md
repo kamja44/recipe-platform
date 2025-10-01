@@ -2350,6 +2350,285 @@ interface RecipeGridProps {
 
 ---
 
+## 비즈니스 로직과 UI 로직 분리 원칙 (Separation of Concerns)
+
+### 🤔 핵심 질문: "왜 handleLogin은 page.tsx에 있을까?"
+
+이것은 React/Next.js 개발에서 가장 중요한 **관심사의 분리(Separation of Concerns)** 원칙입니다.
+
+---
+
+### 📊 아키텍처 계층 분리
+
+```
+┌─────────────────────────────────────────────┐
+│      page.tsx (비즈니스 로직 계층)           │
+│                                             │
+│  책임:                                       │
+│  - API 호출 (useAuth, useMutation)          │
+│  - 성공/실패 후 처리                         │
+│  - 리다이렉트 (router.push)                 │
+│  - 에러 처리 (alert, toast)                 │
+│  - 전역 상태 관리 (isLoading)               │
+│                                             │
+└────────────────┬────────────────────────────┘
+                 ↓ onSuccess, isLoading
+┌─────────────────────────────────────────────┐
+│      Form 컴포넌트 (UI 로직 계층)            │
+│                                             │
+│  책임:                                       │
+│  - 폼 렌더링                                 │
+│  - 입력 검증 (React Hook Form)              │
+│  - 검증된 데이터를 부모에게 전달             │
+│                                             │
+└─────────────────────────────────────────────┘
+```
+
+---
+
+### 🎯 분리해야 하는 4가지 이유
+
+#### 1️⃣ **단일 책임 원칙 (SRP)**
+
+**page.tsx 책임:**
+```typescript
+// ✅ 비즈니스 로직: "검증된 데이터로 무엇을 할 것인가?"
+const handleLogin = async (data: LoginFormData) => {
+  setIsLoading(true);
+  try {
+    await login(data.email, data.password);  // API 호출
+    router.push("/");                        // 리다이렉트
+  } catch (error) {
+    alert("로그인 실패");                     // 에러 처리
+  } finally {
+    setIsLoading(false);                     // 상태 관리
+  }
+};
+```
+
+**LoginForm 책임:**
+```typescript
+// ✅ UI 로직: "입력 받고 검증하기"
+const onSubmit = (data: LoginFormData) => {
+  onSuccess(data);  // 검증된 데이터만 부모에게 전달
+};
+```
+
+---
+
+#### 2️⃣ **재사용성 극대화**
+
+**같은 LoginForm, 다른 용도:**
+```typescript
+// 🎯 로그인 페이지: 홈으로 이동
+<LoginForm onSuccess={(data) => {
+  await login(data);
+  router.push("/");
+}} />
+
+// 🎯 모달 로그인: 모달만 닫기
+<LoginForm onSuccess={(data) => {
+  await login(data);
+  closeModal();
+}} />
+
+// 🎯 체크아웃: 결제 진행
+<LoginForm onSuccess={(data) => {
+  await login(data);
+  proceedToCheckout();
+}} />
+```
+
+**만약 LoginForm에 비즈니스 로직이 있다면?**
+```typescript
+// ❌ 재사용 불가능
+function LoginForm() {
+  const onSubmit = async (data) => {
+    await login(data);
+    router.push("/");  // ← "/" 경로 고정! 변경 불가!
+  };
+}
+```
+
+---
+
+#### 3️⃣ **유지보수성 향상**
+
+**변경 사항별 수정 범위:**
+
+| 변경 사항 | 현재 구조 | LoginForm에 로직 있을 때 |
+|-----------|----------|------------------------|
+| 리다이렉트 경로 변경 | page.tsx만 수정 | LoginForm 수정 |
+| 에러 표시 방식 변경<br>(alert → toast) | page.tsx만 수정 | LoginForm 수정 |
+| 로딩 인디케이터 추가 | page.tsx만 수정 | LoginForm 수정 |
+| 폼 필드 추가 | LoginForm만 수정 | LoginForm 수정 |
+
+**현재 구조의 장점:**
+- 비즈니스 로직 변경 → UI 영향 없음
+- UI 변경 → 비즈니스 로직 영향 없음
+
+---
+
+#### 4️⃣ **테스트 용이성**
+
+**분리된 테스트:**
+```typescript
+// LoginForm 테스트 (순수 함수)
+it('이메일 검증 실패 시 에러 표시', () => {
+  render(<LoginForm onSuccess={mockFn} isLoading={false} />);
+  // props만 테스트, API 모킹 불필요
+});
+
+// page.tsx 테스트 (비즈니스 로직)
+it('로그인 성공 시 홈으로 리다이렉트', async () => {
+  // API, router 모킹하여 비즈니스 로직 테스트
+});
+```
+
+**LoginForm에 로직이 있다면?**
+```typescript
+// ❌ 복잡한 테스트
+it('로그인 테스트', () => {
+  // useAuth, useRouter 모두 모킹 필요
+  // API + UI 통합 테스트 강제
+});
+```
+
+---
+
+### 🚫 안티패턴: Form에 비즈니스 로직 포함
+
+```typescript
+// ❌ 절대 이렇게 하지 말 것!
+function LoginForm() {
+  const { login } = useAuth();
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const onSubmit = async (data: LoginFormData) => {
+    setIsLoading(true);
+    try {
+      await login(data.email, data.password);
+      router.push("/");  // ← 경로 하드코딩
+    } catch (error) {
+      alert(error);      // ← 에러 처리 고정
+    } finally {
+      setIsLoading(false);
+    }
+  };
+}
+```
+
+**문제점:**
+- ❌ SRP 위반 (폼 검증 + API + 리다이렉트 + 에러 처리 + 상태 관리)
+- ❌ useAuth, useRouter 의존성 추가
+- ❌ 재사용 불가능
+- ❌ 테스트 복잡도 증가
+- ❌ 유지보수 어려움
+
+---
+
+### ✅ 올바른 패턴: 콜백 패턴
+
+```typescript
+// ✅ LoginForm: UI만 책임
+function LoginForm({ onSuccess, isLoading }: LoginFormProps) {
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>();
+
+  return (
+    <form onSubmit={handleSubmit(onSuccess)}>
+      {/* 폼 UI만 관리 */}
+    </form>
+  );
+}
+
+// ✅ page.tsx: 비즈니스 로직 책임
+function AuthPage() {
+  const { login } = useAuth();
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleLogin = async (data: LoginFormData) => {
+    setIsLoading(true);
+    try {
+      await login(data.email, data.password);
+      router.push("/");  // 여기서 경로 결정
+    } catch (error) {
+      alert(error);      // 여기서 에러 처리 결정
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return <LoginForm onSuccess={handleLogin} isLoading={isLoading} />;
+}
+```
+
+**장점:**
+- ✅ LoginForm은 순수 UI 컴포넌트 (외부 의존성 없음)
+- ✅ page.tsx는 오케스트레이터 (여러 컴포넌트 조율)
+- ✅ 명확한 데이터 흐름 (props down, callbacks up)
+- ✅ 재사용성 극대화
+
+---
+
+### 💡 실생활 비유
+
+**음식점 비유:**
+```
+page.tsx = 매니저
+- 손님 주문 받기
+- 주방에 전달
+- 음식 서빙
+- 계산 처리
+
+LoginForm = 주문서
+- 메뉴, 수량 입력란 제공
+- 필수 항목 체크
+- 작성된 주문서 전달
+- (주방 가거나 계산 안 함)
+```
+
+**주문서가 모든 일을 한다면?**
+- ❌ 주문서가 주방 가서 요리하고 계산까지 함
+- ❌ 주문서의 책임이 너무 많음!
+
+---
+
+### 📐 설계 체크리스트
+
+**컴포넌트 설계 시 질문:**
+1. ✅ 이 컴포넌트의 **단 하나의 책임**은 무엇인가?
+2. ✅ 다른 곳에서 **재사용** 가능한가?
+3. ✅ **props만 변경**해서 다른 동작이 가능한가?
+4. ✅ **외부 의존성**이 최소화되어 있는가?
+
+**LoginForm 답변:**
+```
+✅ 단 하나의 책임: "로그인 입력 받고 검증하기"
+✅ 재사용 가능: 모달, 페이지, 관리자 페이지 등
+✅ props로 동작 변경: onSuccess로 다른 처리
+✅ 의존성 최소: useForm만 사용
+```
+
+---
+
+### 🎓 핵심 정리
+
+| 측면 | LoginForm (UI) | page.tsx (비즈니스) |
+|------|---------------|-------------------|
+| **책임** | 폼 렌더링 + 검증 | API + 리다이렉트 + 에러 |
+| **알아야 할 것** | 폼 필드, 검증 규칙 | API, 경로, 에러 처리 |
+| **의존성** | useForm | useAuth, useRouter |
+| **재사용성** | 높음 (어디서든) | 낮음 (페이지 전용) |
+| **테스트** | 단순 (props) | 복잡 (API 모킹) |
+
+**결론:**
+- Form = 데이터 수집기 (what)
+- Page = 의사결정자 (how, where, when)
+
+---
+
 ## 다음 학습 목표
 
 - [x] 클라이언트 컴포넌트 vs 서버 컴포넌트 ✅
@@ -2361,4 +2640,5 @@ interface RecipeGridProps {
 - [x] API 연동 (Axios + TanStack Query) ✅
 - [x] Frontend-Backend 완전 통합 ✅
 - [x] 레시피 저장 및 목록 기능 ✅
-- [ ] 사용자 인증 시스템
+- [x] 비즈니스 로직과 UI 로직 분리 원칙 ✅
+- [ ] 사용자 인증 시스템 (진행 중)

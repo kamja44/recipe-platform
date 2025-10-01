@@ -196,7 +196,64 @@ project/                        # 모노레포 루트
 - Swagger JWT 인증 지원
 - Production 수준 보안 구현 및 실제 테스트 완료
 
-🔄 **다음 단계**
+### Frontend 인증 시스템 구현 완료 (2024-10-01)
+
+✅ **React Hook Form 기반 인증 폼 완성**
+- **LoginForm 컴포넌트**: React Hook Form + 이메일/비밀번호 검증
+- **SignupForm 컴포넌트**: 비밀번호 확인 검증 (watch + validate)
+- **PasswordField**: forwardRef 패턴으로 register() 호환
+- **types/auth.ts**: LoginFormData, SignupFormData 타입 정의
+
+✅ **인증 상태 관리 시스템 구축**
+- **AuthContext**: Context API로 전역 인증 상태 관리
+- **useAuth 훅**: Context 소비 훅 (hooks/ 폴더 분리)
+- **localStorage**: 토큰/사용자 정보 영구 저장
+- **TanStack Query useMutation**: 로그인/회원가입 API 호출
+
+✅ **비즈니스 로직과 UI 로직 완전 분리**
+- **page.tsx**: 비즈니스 로직 (API 호출, 리다이렉트, 에러 처리)
+- **Form 컴포넌트**: UI 로직 (폼 렌더링, 검증)
+- **콜백 패턴**: onSuccess로 검증된 데이터만 전달
+- **재사용성 극대화**: 모달, 체크아웃 등 다양한 상황에서 사용 가능
+
+✅ **학습 내용 문서화**
+- **TIL-Auth.md**: React Hook Form, 비즈니스/UI 로직 분리 원칙 추가
+- **TIL-Frontend.md**: Separation of Concerns 섹션 추가
+- **CLAUDE.md**: Form 구현 원칙, 비즈니스 로직 분리 원칙 추가
+
+✅ **인증 시스템 통합 완료** (2024-10-01)
+- **layout.tsx에 AuthProvider 추가**: 전역 인증 상태 관리 활성화
+- **Axios 인터셉터**: JWT 토큰 자동 추가, 401 에러 시 토큰 제거
+- **ProtectedRoute 컴포넌트**: 인증 필요 페이지 보호, LoadingState 재사용
+- **Header 로그인 상태 표시**: 조건부 렌더링 (로그인/로그아웃 버튼)
+
+🎯 **완성된 인증 시스템 전체 구조**
+```
+Frontend 인증 플로우:
+1. 사용자 로그인 → AuthContext에 토큰/사용자 저장
+2. localStorage에 영구 저장 (새로고침 유지)
+3. Axios 인터셉터가 모든 API 요청에 토큰 자동 추가
+4. ProtectedRoute로 보호된 페이지 접근 제어
+5. Header에 로그인 상태 실시간 표시
+```
+
+✅ **Frontend-Backend 연동 테스트 완료** (2024-10-01)
+- **CORS 설정**: credentials 오타 수정 (Credential → credentials)
+- **API 경로 수정**: `/users/register`, `/users/login` 경로 통일
+- **DTO 필드명 통일**: Backend `name` → `username` 변경
+- **회원가입 성공**: test@test.com 계정 생성 완료
+- **로그인 성공**: JWT 토큰 발급 및 localStorage 저장 확인
+- **토큰 자동 추가**: Axios 인터셉터가 Authorization 헤더 자동 추가 확인
+- **Header 상태 표시**: "test님" 표시 및 로그아웃 버튼 정상 작동
+- **새로고침 유지**: localStorage 덕분에 브라우저 재시작 후에도 로그인 유지
+
+🎉 **인증 시스템 완전 작동 확인**
+```
+✅ 회원가입 → 로그인 → 토큰 저장 → 자동 헤더 추가 → 상태 표시 → 새로고침 유지
+완벽한 인증 플로우 동작!
+```
+
+🔄 **Backend 다음 단계**
 - [ ] FastAPI AI 서비스 기본 구조 구현
 - [ ] NestJS와 FastAPI 간 마이크로서비스 통신
 - [ ] AI 레시피 추천 기능 구현
@@ -297,6 +354,73 @@ project/                        # 모노레포 루트
   - 사용자가 파일에 직접 작성
   - 작업 완료 후 사용자가 Claude에게 검토 요청
 
+### Form 구현 원칙 (React Hook Form)
+
+⚠️ **Form 상태 관리 원칙**
+- **React Hook Form 사용 필수**: useState 대신 useForm() 훅 사용
+- **컴포넌트 내부에서 폼 선언**: SOLID 원칙(SRP) 준수
+- **부모는 결과만 받음**: onSuccess 콜백 패턴 사용
+- **폼 검증 로직 캡슐화**: register()로 선언적 검증
+
+**Form 아키텍처 패턴:**
+```typescript
+// ✅ 올바른 패턴: 컴포넌트 내부에서 useForm 선언
+function LoginForm({ onSuccess, isLoading }: LoginFormProps) {
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
+    defaultValues: { email: "", password: "" },
+  });
+
+  const onSubmit = (data: LoginFormData) => {
+    onSuccess(data);  // 부모에게 검증된 데이터만 전달
+  };
+
+  return <form onSubmit={handleSubmit(onSubmit)}>...</form>;
+}
+
+// ❌ 잘못된 패턴: page.tsx에서 useForm 선언
+function AuthPage() {
+  const loginForm = useForm<LoginFormData>();  // 이렇게 하지 말 것
+  return <LoginForm form={loginForm} />;
+}
+```
+
+**이유:**
+- LoginForm이 자신의 폼만 책임 (단일 책임 원칙)
+- 폼 구현 세부사항 캡슐화 (정보 은닉)
+- 컴포넌트 재사용성 극대화
+- Page 컴포넌트는 비즈니스 로직만 처리
+
+**검증 규칙 작성:**
+```typescript
+{...register("email", {
+  required: "이메일을 입력해주세요",
+  pattern: {
+    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+    message: "올바른 이메일 형식이 아닙니다",
+  },
+})}
+```
+
+**비밀번호 확인 검증:**
+```typescript
+const password = watch("password");  // 실시간 감시
+
+{...register("confirmPassword", {
+  validate: (value) => value === password || "비밀번호가 일치하지 않습니다",
+})}
+```
+
+**forwardRef 패턴 (커스텀 Input):**
+```typescript
+// register()와 호환되는 커스텀 컴포넌트
+export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
+  ({ id, placeholder, ...props }, ref) => {
+    return <Input ref={ref} {...props} />;
+  }
+);
+PasswordField.displayName = "PasswordField";
+```
+
 **작업 플로우:**
 1. Claude가 작업 가이드 및 코드 예시 제공
 2. 사용자가 직접 코드 작성
@@ -305,6 +429,42 @@ project/                        # 모노레포 루트
 5. 다음 단계 진행
 
 - 단계별 진행하며 각 단계 완료 후 다음 단계로 진행
+
+### TIL 문서 작성 가이드
+⚠️ **중요**: TIL 작성 시 다음 원칙을 준수
+
+**시각화 원칙:**
+- **아스키 아트 활용 필수**: 복잡한 구조나 플로우는 반드시 아스키 아트로 시각화
+- **데이터 흐름 표현**: 화살표(→, ↓)를 사용하여 데이터 흐름 명확히 표시
+- **계층 구조 표현**: 들여쓰기와 박스(┌─┐└─┘)를 활용하여 계층 관계 표현
+- **비교표 활용**: 개념 비교 시 표(table) 형식 활용
+
+**아스키 아트 예시:**
+```
+┌─────────────────────────────────────────────────┐
+│                  상위 컴포넌트                    │
+└───────────────────┬─────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────────────┐
+│               중간 컴포넌트                       │
+└───────────────────┬─────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────────────┐
+│               하위 컴포넌트                       │
+└─────────────────────────────────────────────────┘
+```
+
+**설명 구조:**
+1. **개념 소개**: 무엇을 배웠는지
+2. **시각적 표현**: 아스키 아트로 구조/플로우 표현
+3. **코드 분석**: 실제 코드와 문법 설명
+4. **핵심 정리**: 배운 내용 요약
+
+**문서 구성:**
+- 목차 제공 (긴 문서의 경우)
+- 이모지 활용으로 가독성 향상
+- 코드 블록에 언어 명시
+- 실제 프로젝트 파일 경로 명시
 ### AI Service 개발 완료 현황 (2024-09-30)
 
 ✅ **FastAPI AI 서비스 기본 구조 완성** 🤖
