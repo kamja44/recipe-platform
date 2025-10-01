@@ -5,6 +5,7 @@ import {
   SavedRecipe,
 } from "@/types/recipe";
 import { apiClient } from "./client";
+import { RecipeDetail } from "@/types/common";
 
 /**
  * AI 레시피 생성 API 호출
@@ -51,5 +52,11 @@ export const getRecipes = async (page = 1, limit = 10) => {
       limit,
     },
   });
+  return response.data;
+};
+
+// 레시피 상세 조회
+export const getRecipeById = async (id: number): Promise<RecipeDetail> => {
+  const response = await apiClient.get<RecipeDetail>(`/recipes/${id}`);
   return response.data;
 };
