@@ -7,12 +7,34 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { useRecipeStream } from "@/hooks/useRecipeStream";
+import { useRouter } from "next/navigation";
+import { useMutation } from "@tanstack/react-query";
+import { createRecipe } from "@/lib/api/recipes";
+import { parseAIRecipe } from "@/lib/utils/parseRecipe";
+import { Save } from "lucide-react";
 
 export default function RecommendPage() {
+  const router = useRouter();
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [currentIngredient, setCurrentIngredient] = useState("");
   const [preferences, setPreferences] = useState("");
   const { recipe, isStreaming, error, generateRecipe } = useRecipeStream();
+
+  // 레시피 저장 mutation
+  const { mutate: saveRecipe, isPending: isSaving } = useMutation({
+    mutationFn: createRecipe,
+    onSuccess: (savedRecipe) => {
+      // 저장 성공 시 상세 페이지로 이동
+      router.push(`/recipes/${savedRecipe.id}`);
+    },
+    onError: (error) => {
+      alert(
+        `저장 실패: ${
+          error instanceof Error ? error.message : "알 수 없는 오류"
+        }`
+      );
+    },
+  });
 
   const addIngredient = () => {
     if (
@@ -32,6 +54,37 @@ export default function RecommendPage() {
     if (ingredients.length > 0) {
       generateRecipe(ingredients, preferences);
     }
+  };
+
+  const handleSaveRecipe = () => {
+    if (!recipe) {
+      return;
+    }
+
+    // AI 텍스트 응답을 구조화된 데이터로 파싱
+    const parsedRecipe = parseAIRecipe(recipe);
+
+    // 검증: 필수 필드 체크
+    if (parsedRecipe.ingredients.length === 0) {
+      alert("재료를 파싱할 수 없습니다. AI 응답 형식을 확인해주세요.");
+      return;
+    }
+
+    if (parsedRecipe.instructions.length === 0) {
+      alert("조리법을 파싱할 수 없습니다. AI 응답 형식을 확인해주세요.");
+      return;
+    }
+
+    saveRecipe({
+      title: parsedRecipe.title,
+      description: parsedRecipe.description,
+      ingredients: parsedRecipe.ingredients,
+      instructions: parsedRecipe.instructions,
+      cookTime: parsedRecipe.cookTime,
+      servings: parsedRecipe.servings,
+      difficulty: parsedRecipe.difficulty,
+      category: preferences || undefined,
+    });
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -115,12 +168,26 @@ export default function RecommendPage() {
           )}
 
           {recipe && (
-            <div className="prose prose-slate max-w-none">
-              <div className="whitespace-pre-wrap text-sm">
-                {recipe}
-                {isStreaming && <span className="animate-pulse">▊</span>}
+            <>
+              <div className="prose prose-slate max-w-none mb-4">
+                <div className="whitespace-pre-wrap text-sm">
+                  {recipe}
+                  {isStreaming && <span className="animate-pulse">▊</span>}
+                </div>
               </div>
-            </div>
+
+              {/* 저장 버튼 (스트리밍 완료 후에만 표시) */}
+              {!isStreaming && (
+                <Button
+                  onClick={handleSaveRecipe}
+                  disabled={isSaving}
+                  className="w-full"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {isSaving ? "저장 중..." : "레시피 저장하기"}
+                </Button>
+              )}
+            </>
           )}
 
           {!recipe && !isStreaming && !error && (

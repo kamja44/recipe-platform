@@ -60,3 +60,11 @@ export const getRecipeById = async (id: number): Promise<RecipeDetail> => {
   const response = await apiClient.get<RecipeDetail>(`/recipes/${id}`);
   return response.data;
 };
+
+// 레시피 저장
+export const createRecipe = async (
+  data: CreateRecipeRequest
+): Promise<SavedRecipe> => {
+  const response = await apiClient.post<SavedRecipe>(`/recipes`, data);
+  return response.data;
+};
