@@ -131,8 +131,8 @@ export class RecipesService {
     return this.recipeRepository
       .createQueryBuilder('recipe')
       .leftJoinAndSelect('recipe.user', 'user')
-      .where('recipe.ingredients LIKE :ingredient', {
-        ingredient: `%${ingredient}`,
+      .where('LOWER(recipe.ingredients) LIKE LOWER(:ingredient)', {
+        ingredient: `%${ingredient}%`,
       })
       .orderBy('recipe.createdAt', 'DESC')
       .getMany();

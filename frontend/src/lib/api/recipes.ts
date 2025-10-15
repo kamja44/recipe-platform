@@ -38,9 +38,49 @@ export const saveRecipe = async (
  * 레시피 목록 조회 API 호출
  * @param page 페이지 번호
  * @param limit 페이지당 항목 수
+ * @param searchQuery 재료 검색어 (선택)
+ * @param category 카테고리 (선택)
  * @returns 레시피 목록
  */
-export const getRecipes = async (page = 1, limit = 10) => {
+export const getRecipes = async (
+  page = 1,
+  limit = 10,
+  searchQuery?: string,
+  category?: string | null
+) => {
+  // 검색어나 카테고리가 있으면 다른 엔드포인트 사용
+  if (searchQuery) {
+    // 재료로 검색
+    const response = await apiClient.get<SavedRecipe[]>(
+      `/recipes/search/ingredient`,
+      {
+        params: { q: searchQuery },
+      }
+    );
+
+    // BE가 배열만 반환하기에, 페이지네이션 형식으로 변환
+    return {
+      data: response.data,
+      total: response.data.length,
+      page: 1,
+      limit: response.data.length,
+    };
+  }
+
+  if (category) {
+    // 카테고리로 필터링
+    const response = await apiClient.get<SavedRecipe[]>(
+      `/recipes/category/${category}`
+    );
+    return {
+      data: response.data,
+      total: response.data.length,
+      page: 1,
+      limit: response.data.length,
+    };
+  }
+
+  // 기본 목록 조회(페이지네이션)
   const response = await apiClient.get<{
     data: SavedRecipe[];
     total: number;

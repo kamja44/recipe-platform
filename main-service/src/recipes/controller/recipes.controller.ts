@@ -261,7 +261,10 @@ export class RecipesController {
     type: [Recipe],
   })
   async findByIngredient(@Query('q') ingredient: string): Promise<Recipe[]> {
-    return this.recipesService.findByIngredient(ingredient);
+    // URL 디코딩 추가
+    const decodedIngredient = decodeURIComponent(ingredient);
+
+    return this.recipesService.findByIngredient(decodedIngredient);
   }
 
   // AI를 활용한 레시피 생성
