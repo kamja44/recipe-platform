@@ -1,3 +1,4 @@
+import { Review } from 'src/reviews/entities/review.entity';
 import { User } from 'src/users/entities/user.entity';
 import {
   Column,
@@ -5,6 +6,7 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -61,4 +63,7 @@ export class Recipe {
 
   @Column({ nullable: true })
   userId: number;
+
+  @OneToMany(() => Review, (review) => review.recipe)
+  reviews: Review[];
 }

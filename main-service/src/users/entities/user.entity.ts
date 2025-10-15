@@ -1,4 +1,5 @@
 import { Recipe } from 'src/recipes/entities/recipe.entity';
+import { Review } from 'src/reviews/entities/review.entity';
 import {
   Column,
   CreateDateColumn,
@@ -30,4 +31,7 @@ export class User {
 
   @OneToMany(() => Recipe, (recipe) => recipe.user)
   recipes: Recipe[];
+
+  @OneToMany(() => Review, (review) => review.user)
+  reviews: Review[];
 }

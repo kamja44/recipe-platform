@@ -715,11 +715,75 @@ router.push('/recipes/5')
 ✅ Delete: AlertDialog 확인 + 캐시 무효화
 ```
 
+✅ **리뷰/평점 시스템 Backend 완전 구현 완료** (2024-10-15) 🎉
+
+### Review Entity 및 TypeORM 관계 설정
+- **Review Entity**: rating(1-5), comment, userId, recipeId
+- **User ↔ Review**: OneToMany (한 유저가 여러 리뷰 작성)
+- **Recipe ↔ Review**: OneToMany (한 레시피가 여러 리뷰 받음)
+- **onDelete CASCADE**: 레시피 삭제 시 리뷰 자동 삭제
+- **eager: true**: 리뷰 조회 시 작성자 정보 자동 로드
+
+### Reviews Service 구현
+- **create()**: 리뷰 생성 (recipeId, userId, CreateReviewDto)
+- **findByRecipe()**: 레시피별 리뷰 목록 조회 (최신순 정렬)
+- **update()**: 리뷰 수정 (권한 체크: 본인만 가능)
+- **remove()**: 리뷰 삭제 (권한 체크: 본인만 가능)
+- **getAverageRating()**: SQL AVG, COUNT로 평균 평점 계산
+  - QueryBuilder 활용
+  - 타입 안전성: `getRawOne<T>()` 제네릭 타입 명시
+  - null 체크 및 기본값 0 반환
+
+### Reviews Controller 구현
+- **POST /reviews/recipes/:recipeId**: 리뷰 작성 (JWT 필수)
+- **GET /reviews/recipes/:recipeId**: 리뷰 목록 조회 (공개)
+- **GET /reviews/recipes/:recipeId/average**: 평균 평점 조회 (공개)
+- **PATCH /reviews/:id**: 리뷰 수정 (본인만, JWT 필수)
+- **DELETE /reviews/:id**: 리뷰 삭제 (본인만, JWT 필수)
+- **AuthenticatedRequest 인터페이스**: req.user 타입 안전성 확보
+
+### DTO 및 타입 안전성
+- **CreateReviewDto**: rating(1-5 검증), comment(필수)
+- **UpdateReviewDto**: PartialType으로 선택적 수정
+  - `@nestjs/mapped-types` 사용 (타입 변환용)
+  - `@nestjs/swagger` 대신 사용하여 타입 안전성 확보
+
+### 트러블슈팅
+- **PartialType import 오류**: `@nestjs/swagger` → `@nestjs/mapped-types`
+- **Request 타입 오류**: `@nestjs/common` → `express`에서 import
+- **ESLint any 오류**: AuthenticatedRequest 인터페이스로 해결
+- **getRawOne() 타입**: 제네릭 타입 명시 및 null 체크
+
+🎯 **완성된 리뷰 시스템 구조**
+```
+┌──────────────────────────────────────────┐
+│           리뷰/평점 시스템               │
+├──────────────────────────────────────────┤
+│  User (1) ←→ (N) Review                  │
+│  Recipe (1) ←→ (N) Review                │
+│                                           │
+│  Reviews Service                          │
+│  ├─ create()                              │
+│  ├─ findByRecipe()                        │
+│  ├─ update() (권한 체크)                  │
+│  ├─ remove() (권한 체크)                  │
+│  └─ getAverageRating() (SQL AVG)         │
+│                                           │
+│  Reviews Controller                       │
+│  ├─ POST /reviews/recipes/:recipeId      │
+│  ├─ GET /reviews/recipes/:recipeId       │
+│  ├─ GET /reviews/recipes/:recipeId/avg   │
+│  ├─ PATCH /reviews/:id                   │
+│  └─ DELETE /reviews/:id                  │
+└──────────────────────────────────────────┘
+```
+
 🔄 **다음 단계**
+- [ ] Frontend 리뷰 UI 구현 (StarRating, ReviewForm, ReviewList)
+- [ ] 평균 평점 표시 컴포넌트
 - [ ] 검색 + 카테고리 조합 필터
 - [ ] 검색 결과 페이지네이션
 - [ ] 레시피 이미지 업로드 기능
-- [ ] 리뷰/평점 시스템
 - [ ] 사용자 프로필 페이지 (내가 작성한 레시피)
 - [ ] 에러 처리 개선 (타임아웃, 재시도)
 - [ ] 프로덕션 배포 준비
