@@ -83,7 +83,7 @@ export default function RecommendPage() {
       cookTime: parsedRecipe.cookTime,
       servings: parsedRecipe.servings,
       difficulty: parsedRecipe.difficulty,
-      category: preferences || undefined,
+      category: "AI추천",
     });
   };
 

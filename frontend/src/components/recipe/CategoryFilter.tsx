@@ -11,9 +11,10 @@ interface CategoryFilterProps {
   onCategoryChange: (category: string | null) => void;
 }
 
-// 카테고리 목록 (추후 Backend에서 가져오거나 상수 파일로 분리 가능)
+// 카테고리 목록
 const CATEGORIES = [
   { id: null, label: "전체" },
+  { id: "AI추천", label: "AI 추천" },
   { id: "한식", label: "한식" },
   { id: "중식", label: "중식" },
   { id: "일식", label: "일식" },
