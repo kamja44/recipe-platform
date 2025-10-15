@@ -96,4 +96,12 @@ export class CreateRecipeDto {
   @IsOptional()
   @IsString()
   category?: string;
+
+  @ApiPropertyOptional({
+    example: 1,
+    description: '작성자 ID',
+  })
+  @IsOptional()
+  @IsNumber()
+  userId?: number;
 }

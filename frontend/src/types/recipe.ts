@@ -32,6 +32,7 @@ export interface CreateRecipeRequest {
   cookTime?: number;
   servings?: number;
   category?: string;
+  userId?: number;
 }
 
 // 저장된 레시피 응답

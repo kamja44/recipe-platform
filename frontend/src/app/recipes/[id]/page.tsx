@@ -12,6 +12,7 @@ import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { getRecipeById } from "@/lib/api/recipes";
 import { LoadingState } from "@/components/common/LoadingState";
+import { RecipeActions } from "@/components/recipe/RecipeActions";
 
 export default function RecipeDetailPage() {
   const params = useParams();
@@ -57,7 +58,14 @@ export default function RecipeDetailPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <RecipeHeader recipe={recipe} />
+      {/* RecipeHeader 수정 */}
+      <div className="mb-8">
+        <RecipeHeader recipe={recipe} />
+        {/* 수정/삭제 버튼 추가 */}
+        <div className="mt-4">
+          <RecipeActions recipeId={recipe.id} authorId={recipe.userId || 0} />
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* 재료 */}

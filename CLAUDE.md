@@ -646,7 +646,7 @@ router.push('/recipes/5')
 
 ### 검색/필터링 기능
 - **SearchBar 컴포넌트**: 재료명 검색, Enter 키 지원, X 버튼
-- **CategoryFilter 컴포넌트**: 카테고리 버튼 그룹, 선택 상태 표시
+- **CategoryFilter 컴포넌트**: 카테고리 버튼 그룹, 선택 상태 표시, "AI추천" 카테고리 추가
 - **Backend API 연동**:
   - 재료 검색: `GET /recipes/search/ingredient?q=감자`
   - 카테고리 필터: `GET /recipes/category/:category`
@@ -658,6 +658,37 @@ router.push('/recipes/5')
 - **JSON 파싱 오류 해결**: PostgreSQL의 simple-array는 일반 LIKE만 사용
 - **검색 쿼리 수정**: `%${ingredient}%` 양쪽에 와일드카드 추가
 - **한글 인코딩 문제**: Backend Controller에서 URL 디코딩 처리
+- **AI 레시피 카테고리**: recommend/page.tsx에서 `category: "AI추천"` 수정
+
+✅ **레시피 CRUD 기능 완전 구현 완료** (2024-10-15) 🎉
+
+### 수정/삭제 기능
+- **RecipeActions 컴포넌트**: 권한 기반 수정/삭제 버튼 표시
+  - `user?.id === authorId` 조건으로 본인 레시피만 표시
+  - AlertDialog로 삭제 확인 모달 구현
+  - 삭제 성공 시 캐시 무효화 및 목록 페이지로 리다이렉트
+- **레시피 수정 페이지**: `/recipes/[id]/edit` 구현
+  - React Hook Form으로 폼 상태 관리
+  - `reset()`으로 기존 데이터 폼 초기화
+  - 재료/조리법 배열 ↔ 문자열 변환 (줄바꿈 기준)
+  - 필수 필드 검증: 재료 2개 이상, 조리법 3단계 이상
+- **난이도 필드 변환 로직**:
+  - Backend: 한글 저장 ("쉬움", "보통", "어려움")
+  - Frontend: 영어 value ("easy", "medium", "hard")
+  - `difficultyToEn()`, `difficultyToKo()` 변환 함수로 매핑
+
+### API 통합
+- **updateRecipe()**: `PATCH /recipes/:id` API 호출
+- **deleteRecipe()**: `DELETE /recipes/:id` API 호출
+- **userId 필드 추가**: AI 레시피 저장 시 사용자 ID 포함
+  - Backend DTO에 `userId?: number` 추가
+  - Frontend에서 `useAuth()` 훅으로 현재 사용자 확인
+  - 로그인 체크 후 저장 진행
+
+### 권한 관리
+- **조건부 렌더링**: `if (!canEdit || !authorId) return null;`
+- **본인 레시피만 수정/삭제**: AuthContext의 user.id와 recipe.userId 비교
+- **레시피 상세 페이지**: RecipeActions 컴포넌트 추가
 
 🎯 **완성된 레시피 목록 페이지**
 ```
@@ -665,7 +696,7 @@ router.push('/recipes/5')
 │         레시피 목록 페이지               │
 ├──────────────────────────────────────────┤
 │  🔍 검색: "재료명으로 검색..."           │
-│  📁 필터: [전체][한식][중식][일식]...    │
+│  📁 필터: [전체][AI추천][한식][중식]...  │
 ├──────────────────────────────────────────┤
 │  📋 레시피 목록 (페이지네이션)           │
 │  ┌──────┐ ┌──────┐ ┌──────┐             │
@@ -676,11 +707,20 @@ router.push('/recipes/5')
 └──────────────────────────────────────────┘
 ```
 
+🎯 **완성된 CRUD 플로우**
+```
+✅ Create: AI 레시피 생성 및 저장 (userId 포함)
+✅ Read: 레시피 목록/상세 페이지 (TanStack Query)
+✅ Update: React Hook Form + 난이도 변환 로직
+✅ Delete: AlertDialog 확인 + 캐시 무효화
+```
+
 🔄 **다음 단계**
-- [ ] 카테고리 필터 실제 동작 (현재 UI만 구현)
-- [ ] 레시피 수정/삭제 기능
 - [ ] 검색 + 카테고리 조합 필터
 - [ ] 검색 결과 페이지네이션
+- [ ] 레시피 이미지 업로드 기능
+- [ ] 리뷰/평점 시스템
+- [ ] 사용자 프로필 페이지 (내가 작성한 레시피)
 - [ ] 에러 처리 개선 (타임아웃, 재시도)
 - [ ] 프로덕션 배포 준비
 

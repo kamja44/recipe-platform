@@ -40,7 +40,7 @@ export interface RecommendationResultsProps {
 }
 
 export interface RecipeListItem {
-  id: string;
+  id: number;
   title: string;
   description: string;
   image: string;
@@ -60,4 +60,5 @@ export interface RecipeDetail extends RecipeListItem {
     carbs: number;
     fat: number;
   };
+  userId: number | null;
 }

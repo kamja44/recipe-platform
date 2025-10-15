@@ -12,9 +12,11 @@ import { useMutation } from "@tanstack/react-query";
 import { createRecipe } from "@/lib/api/recipes";
 import { parseAIRecipe } from "@/lib/utils/parseRecipe";
 import { Save } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function RecommendPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [currentIngredient, setCurrentIngredient] = useState("");
   const [preferences, setPreferences] = useState("");
@@ -61,6 +63,12 @@ export default function RecommendPage() {
       return;
     }
 
+    if (!user) {
+      alert("로그인이 필요합니다.");
+      router.push("/auth");
+      return;
+    }
+
     // AI 텍스트 응답을 구조화된 데이터로 파싱
     const parsedRecipe = parseAIRecipe(recipe);
 
@@ -84,6 +92,7 @@ export default function RecommendPage() {
       servings: parsedRecipe.servings,
       difficulty: parsedRecipe.difficulty,
       category: "AI추천",
+      userId: user.id,
     });
   };
 

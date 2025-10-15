@@ -108,3 +108,25 @@ export const createRecipe = async (
   const response = await apiClient.post<SavedRecipe>(`/recipes`, data);
   return response.data;
 };
+
+/**
+ * 레시피 수정 API 호출
+ * @param id 레시피 ID
+ * @param data 수정할 데이터
+ * @returns 수정된 레시피
+ */
+export const updateRecipe = async (
+  id: number,
+  data: Partial<CreateRecipeRequest>
+): Promise<SavedRecipe> => {
+  const response = await apiClient.patch<SavedRecipe>(`/recipes/${id}`, data);
+  return response.data;
+};
+
+/**
+ * 레시피 삭제 API 호출
+ * @param id 레시피 ID
+ */
+export const deleteRecipe = async (id: number): Promise<void> => {
+  await apiClient.delete(`/recipes/${id}`);
+};
