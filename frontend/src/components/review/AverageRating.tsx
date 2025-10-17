@@ -25,7 +25,7 @@ export function AverageRating({ data }: AverageRatingProps) {
         {/* 평균 별점 숫자 */}
         <div className="text-center">
           <div className="text-4xl font-bold text-primary mb-1">
-            {averageRating.toFixed(1)}
+            {(averageRating || 0).toFixed(1)}
           </div>
           <div className="text-sm text-muted-foreground">평균 평점</div>
         </div>

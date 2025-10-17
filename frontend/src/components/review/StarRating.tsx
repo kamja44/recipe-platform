@@ -45,7 +45,7 @@ export function StarRating({
   };
 
   const handleMouseLeave = () => {
-    if (!readONly) {
+    if (!readOnly) {
       setHoverRating(0);
     }
   };
@@ -84,7 +84,9 @@ export function StarRating({
         </button>
       ))}
       {readOnly && (
-        <span className="ml-1 text-sm text-gray-600">{rating.toFixed(1)}</span>
+        <span className="ml-1 text-sm text-gray-600">
+          {(rating || 0).toFixed(1)}
+        </span>
       )}
     </div>
   );
