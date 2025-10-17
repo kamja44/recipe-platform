@@ -8,15 +8,29 @@ import { RecipeIngredients } from "@/components/recipe/RecipeIngredients";
 import { RecipeNutrition } from "@/components/recipe/RecipeNutrition";
 import { RecipeInstructions } from "@/components/recipe/RecipeInstructions";
 import { RecipeTips } from "@/components/recipe/RecipeTips";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { getRecipeById } from "@/lib/api/recipes";
 import { LoadingState } from "@/components/common/LoadingState";
 import { RecipeActions } from "@/components/recipe/RecipeActions";
+import { useAuth } from "@/hooks/useAuth";
+import {
+  useAverageRating,
+  useCreateReview,
+  useDeleteReview,
+  useReviews,
+  useUpdateReview,
+} from "@/hooks/useReviews";
+import { CreateReviewRequest, UpdateReviewRequest } from "@/types/review";
+import { AverageRating } from "@/components/review/AverageRating";
+import { ReviewForm } from "@/components/review/ReviewForm";
+import { ReviewList } from "@/components/review/ReviewList";
 
 export default function RecipeDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = Number(params.id);
+  const { user } = useAuth();
 
   const {
     data: recipe,
@@ -26,6 +40,65 @@ export default function RecipeDetailPage() {
     queryKey: ["recipe", id],
     queryFn: () => getRecipeById(id),
   });
+
+  // 리뷰 관련 훅
+  const { data: averageRating } = useAverageRating(id);
+  const { data: reviews = [] } = useReviews(id);
+  const createReviewMutation = useCreateReview(id);
+  const updateReviewMutation = useUpdateReview(id);
+  const deleteReviewMutation = useDeleteReview(id);
+
+  // 리뷰 작성 핸들러
+  const handleReviewSubmit = (data: CreateReviewRequest) => {
+    if (!user) {
+      alert("로그인이 필요합니다.");
+      router.push("/auth");
+      return;
+    }
+
+    createReviewMutation.mutate(data, {
+      onSuccess: () => {
+        alert("리뷰가 작성되었습니다.");
+      },
+      onError: (error) => {
+        console.error("리뷰 작성 실패: ", error);
+        alert("리뷰 작성에 실패했습니다.");
+      },
+    });
+  };
+
+  // 리뷰 수정 핸들러
+  const handleReviewUpdate = (reviewId: number, data: UpdateReviewRequest) => {
+    updateReviewMutation.mutate(
+      { reviewId, data },
+      {
+        onSuccess: () => {
+          alert("리뷰가 수정되었습니다!");
+        },
+        onError: (error) => {
+          console.error("리뷰 수정 실패:", error);
+          alert("리뷰 수정에 실패했습니다.");
+        },
+      }
+    );
+  };
+
+  // 리뷰 삭제 핸들러
+  const handleReviewDelete = (reviewId: number) => {
+    if (!confirm("정말로 이 리뷰를 삭제하시겠습니까?")) {
+      return;
+    }
+
+    deleteReviewMutation.mutate(reviewId, {
+      onSuccess: () => {
+        alert("리뷰가 삭제되었습니다!");
+      },
+      onError: (error) => {
+        console.error("리뷰 삭제 실패:", error);
+        alert("리뷰 삭제에 실패했습니다.");
+      },
+    });
+  };
 
   if (isLoading) {
     return (
@@ -92,6 +165,44 @@ export default function RecipeDetailPage() {
             <RecipeTips tips={recipe.tips} />
           )}
         </div>
+      </div>
+
+      {/* 리뷰 섹션 추가 */}
+      <div className="mt-12 space-y-8">
+        <h2 className="text-2xl font-bold">리뷰 & 평점</h2>
+
+        {/* 평균 평점 */}
+        {averageRating && <AverageRating data={averageRating} />}
+
+        {/* 리뷰 작성 폼 (로그인한 사용자만) */}
+        {user && (
+          <ReviewForm
+            onSubmit={handleReviewSubmit}
+            isSubmitting={createReviewMutation.isPending}
+          />
+        )}
+
+        {/* 로그인 안내 */}
+        {!user && (
+          <div className="text-center py-8 bg-gray-50 rounded-lg">
+            <p className="text-muted-foreground mb-4">
+              리뷰를 작성하려면 로그인이 필요합니다.
+            </p>
+            <Link href="/auth">
+              <Button>로그인하기</Button>
+            </Link>
+          </div>
+        )}
+
+        {/* 리뷰 목록 */}
+        <ReviewList
+          reviews={reviews}
+          currentUserId={user?.id}
+          onUpdate={handleReviewUpdate}
+          onDelete={handleReviewDelete}
+          isUpdating={updateReviewMutation.isPending}
+          isDeleting={deleteReviewMutation.isPending}
+        />
       </div>
     </div>
   );
