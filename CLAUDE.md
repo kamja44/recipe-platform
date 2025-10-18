@@ -814,3 +814,552 @@ http://localhost:3001/api # NestJS Swagger
 - 비동기 프로그래밍으로 고성능 구현
 - Swagger UI 자동 문서화로 개발 생산성 향상
 
+---
+
+## 🚀 프로덕션 배포 전략
+
+### 배포 아키텍처 개요
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                무료/저비용 배포 아키텍처                     │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  🌐 Cloudflare DNS + CDN (무료)                             │
+│     ├─ HTTPS 자동 인증서                                    │
+│     ├─ DDoS 방어                                            │
+│     └─ Custom 도메인 관리                                   │
+│                                                              │
+│  🖥️ Frontend: Cloudflare Pages (무료)                       │
+│     ├─ Next.js 15 SSR/SSG 자동 배포                        │
+│     ├─ GitHub 연동 자동 빌드                                │
+│     ├─ 500 빌드/월, 무제한 요청                             │
+│     └─ Edge CDN 전세계 배포                                 │
+│                                                              │
+│  ⚙️ Backend: Fly.io (무료 크레딧 ~$5/월)                    │
+│     ├─ NestJS (Node.js) - Docker 배포                      │
+│     ├─ FastAPI (Python) - Docker 배포                      │
+│     ├─ 항상 실행 (슬립 없음)                                │
+│     ├─ 전세계 리전 선택 가능 (sin/hkg 추천)                │
+│     └─ 자동 스케일링 및 로드밸런싱                          │
+│                                                              │
+│  🐘 Database: Neon.tech (무료)                              │
+│     ├─ Serverless PostgreSQL                                │
+│     ├─ 최대 500MB, 1 worker                                 │
+│     ├─ 초당 자동 슬립/웨이크                                │
+│     ├─ SSL 기본 제공                                        │
+│     └─ DATABASE_URL로 간편 연결                             │
+│                                                              │
+│  ☁️ Storage: Cloudflare R2 (무료)                           │
+│     ├─ 10GB 스토리지 무료                                   │
+│     ├─ Egress(데이터 전송) 무료                             │
+│     ├─ AWS S3 API 호환                                      │
+│     ├─ CDN 캐시 자동                                        │
+│     └─ 이미지/파일 업로드 호스팅                            │
+│                                                              │
+│  💰 총 예상 비용: $0 ~ $5/월                                │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 배포 플랫폼 상세
+
+| 계층 | 기술 스택 | 배포 플랫폼 | 무료 티어 | 특징 / 장점 | 배포 형태 |
+|------|-----------|-------------|-----------|-------------|-----------|
+| 🖥️ **Frontend** | Next.js 15 (React 19) | **Cloudflare Pages** | ✅ 완전 무료 | • Edge CDN 자동 배포<br>• 빌드 500회/월<br>• 정적/SSR 모두 지원<br>• Custom 도메인 + SSL 무료 | GitHub 연동 후 자동 빌드 |
+| ⚙️ **Backend (Main)** | NestJS (Node.js) | **Fly.io** | ✅ 무료 크레딧 제공<br>(~$5/월 상당) | • Docker 기반 완전 제어<br>• Render보다 빠름<br>• 슬립 없음(Always On)<br>• 전세계 리전 선택 가능<br>(sin/hkg 추천) | `flyctl deploy` |
+| 🧠 **Backend (AI)** | FastAPI (Python) | **Fly.io** | ✅ 무료 크레딧 공유 | • NestJS와 동일 인프라 관리<br>• Docker 기반<br>• ML/AI 코드 쉽게 호스팅 | `flyctl deploy` |
+| 🐘 **Database** | PostgreSQL | **Neon.tech** | ✅ 완전 무료<br>(최대 500MB) | • Serverless Postgres<br>• 초당 자동 슬립/웨이크<br>• SSL 기본 제공<br>• Fly.io와 쉽게 연결 | DATABASE_URL 연결 |
+| ☁️ **Storage** | Cloudflare R2 | **Cloudflare** | ✅ 10GB 무료<br>egress 무료 | • AWS S3 API 호환<br>• CDN 캐시 자동<br>• 이미지 업로드/호스팅 | S3 SDK / Signed URL |
+| 🌐 **도메인 관리** | Cloudflare DNS | **Cloudflare** | ✅ 무료 | • HTTPS 자동 인증서<br>• Pages + Fly.io 모두 연동 | Custom domain 연결 |
+
+### 배포 순서
+
+#### 1단계: Frontend 배포 (Cloudflare Pages)
+
+```bash
+# 1. Cloudflare Pages 연동
+# https://dash.cloudflare.com/pages 접속
+
+# 2. GitHub 레포지토리 연결
+# - Repository: your-username/recipe-platform
+# - Branch: main
+
+# 3. 빌드 설정
+# Build command: cd frontend && npm run build
+# Build output directory: frontend/.next
+# Root directory: / (모노레포)
+
+# 4. 환경변수 설정 (Cloudflare Dashboard)
+NEXT_PUBLIC_API_URL=https://your-app.fly.dev
+
+# 5. 배포 트리거
+# - main 브랜치에 push하면 자동 배포
+git add .
+git commit -m "Deploy to Cloudflare Pages"
+git push origin main
+
+# 배포 완료 URL: https://recipe-platform.pages.dev
+```
+
+**설정 팁:**
+- `@opennextjs/cloudflare` 어댑터 설치 권장
+- `wrangler.toml` 파일 추가로 더 세밀한 제어 가능
+
+#### 2단계: Database 설정 (Neon.tech)
+
+```bash
+# 1. Neon.tech 가입 및 프로젝트 생성
+# https://neon.tech
+
+# 2. Database 생성
+# - Name: recipe-platform
+# - Region: AWS ap-southeast-1 (Singapore) 추천
+
+# 3. Connection String 복사
+# postgresql://user:password@ep-xxx.region.aws.neon.tech/recipe_platform?sslmode=require
+
+# 4. 로컬에서 마이그레이션 실행
+cd main-service
+
+# .env 파일에 Neon DATABASE_URL 추가
+DATABASE_URL=postgresql://user:password@ep-xxx.region.aws.neon.tech/recipe_platform?sslmode=require
+
+# TypeORM 마이그레이션 실행
+npm run typeorm migration:run
+
+# 또는 synchronize로 자동 동기화 (개발 단계)
+# production에서는 migration 사용 필수!
+```
+
+**주의사항:**
+- 무료 티어는 500MB 제한
+- 5분 미사용 시 자동 슬립 (첫 쿼리는 약간 느림)
+- SSL 필수 (`?sslmode=require`)
+
+#### 3단계: Backend 배포 (Fly.io)
+
+##### 3-1. Fly.io 설치 및 로그인
+
+```bash
+# Fly.io CLI 설치 (Windows)
+powershell -Command "iwr https://fly.io/install.ps1 -useb | iex"
+
+# 로그인
+flyctl auth login
+
+# 신용카드 등록 (무료 크레딧 받기 위해 필요, 청구 안됨)
+flyctl auth signup
+```
+
+##### 3-2. NestJS Backend 배포
+
+```bash
+cd main-service
+
+# Dockerfile 생성 (이미 있다면 스킵)
+cat > Dockerfile << 'EOF'
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine
+WORKDIR /app
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY package*.json ./
+EXPOSE 3001
+CMD ["node", "dist/main.js"]
+EOF
+
+# Fly.io 앱 초기화
+flyctl launch
+# App Name: recipe-backend (또는 원하는 이름)
+# Region: Singapore (sin) 또는 Hong Kong (hkg) 추천
+# PostgreSQL: No (Neon 사용)
+# Redis: No (옵션)
+
+# fly.toml 자동 생성됨 - 포트 수정
+```
+
+**fly.toml 수정:**
+```toml
+app = "recipe-backend"
+primary_region = "sin"
+
+[build]
+
+[http_service]
+  internal_port = 3001  # NestJS 포트
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 1  # 항상 1대 실행 (슬립 방지)
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3001"
+```
+
+```bash
+# 환경변수 설정 (Secret)
+flyctl secrets set DATABASE_URL="postgresql://user:password@ep-xxx.neon.tech/recipe_platform?sslmode=require"
+flyctl secrets set JWT_SECRET="your-jwt-secret"
+flyctl secrets set CORS_ORIGIN="https://recipe-platform.pages.dev"
+flyctl secrets set AI_SERVICE_URL="https://recipe-ai.fly.dev"
+
+# 배포
+flyctl deploy
+
+# 배포 완료 URL: https://recipe-backend.fly.dev
+# 헬스 체크: https://recipe-backend.fly.dev/health
+```
+
+##### 3-3. FastAPI AI 서비스 배포
+
+```bash
+cd ../ai-service
+
+# Dockerfile 생성
+cat > Dockerfile << 'EOF'
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+EXPOSE 8000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+EOF
+
+# Fly.io 앱 초기화
+flyctl launch
+# App Name: recipe-ai
+# Region: Singapore (sin) - Backend와 같은 리전 권장
+
+# fly.toml 자동 생성됨
+```
+
+**fly.toml 수정:**
+```toml
+app = "recipe-ai"
+primary_region = "sin"
+
+[build]
+
+[http_service]
+  internal_port = 8000  # FastAPI 포트
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[vm]]
+  memory = "512mb"  # AI 서비스는 메모리 더 필요
+  cpu_kind = "shared"
+  cpus = 1
+
+[env]
+  PORT = "8000"
+```
+
+```bash
+# 환경변수 설정
+flyctl secrets set OPENAI_API_KEY="sk-proj-..."
+flyctl secrets set MAIN_SERVICE_URL="https://recipe-backend.fly.dev"
+
+# 배포
+flyctl deploy
+
+# 배포 완료 URL: https://recipe-ai.fly.dev
+# Swagger UI: https://recipe-ai.fly.dev/docs
+```
+
+#### 4단계: Storage 설정 (Cloudflare R2)
+
+```bash
+# 1. Cloudflare Dashboard에서 R2 활성화
+# https://dash.cloudflare.com/r2
+
+# 2. Bucket 생성
+# Bucket Name: recipe-images
+
+# 3. API Token 생성
+# - Permissions: Object Read & Write
+# - R2 Buckets: recipe-images
+
+# 4. Frontend/Backend에서 S3 호환 SDK 사용
+# Endpoint: https://<account-id>.r2.cloudflarestorage.com
+# Access Key ID: <your-access-key>
+# Secret Access Key: <your-secret-key>
+
+# 5. Backend 환경변수 추가 (Fly.io)
+flyctl secrets set R2_ACCOUNT_ID="your-account-id"
+flyctl secrets set R2_ACCESS_KEY_ID="your-access-key"
+flyctl secrets set R2_SECRET_ACCESS_KEY="your-secret-key"
+flyctl secrets set R2_BUCKET_NAME="recipe-images"
+```
+
+#### 5단계: Custom Domain 연결
+
+```bash
+# 1. Cloudflare DNS에 도메인 추가
+# - recipe-platform.com 구매 (Cloudflare Registrar 추천)
+
+# 2. Frontend (Cloudflare Pages) 도메인 연결
+# Cloudflare Pages Dashboard → Custom domains
+# - recipe-platform.com
+# - www.recipe-platform.com
+
+# 3. Backend (Fly.io) 도메인 연결
+# Cloudflare DNS → Add Record
+# Type: CNAME
+# Name: api
+# Target: recipe-backend.fly.dev
+# Proxy: On (Cloudflare CDN 활성화)
+
+# 4. AI Service 도메인 연결
+# Type: CNAME
+# Name: ai
+# Target: recipe-ai.fly.dev
+# Proxy: On
+
+# 최종 URL:
+# - Frontend: https://recipe-platform.com
+# - Backend: https://api.recipe-platform.com
+# - AI Service: https://ai.recipe-platform.com
+```
+
+### CI/CD 자동 배포 (GitHub Actions)
+
+**`.github/workflows/deploy.yml`:**
+```yaml
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Cloudflare Pages는 자동 배포되므로 별도 작업 불필요
+      # GitHub 연동 시 자동으로 배포됨
+
+  deploy-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Fly.io
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy NestJS Backend
+        run: |
+          cd main-service
+          flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  deploy-ai:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Fly.io
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy FastAPI AI
+        run: |
+          cd ai-service
+          flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+```
+
+**GitHub Secrets 설정:**
+```
+Repository Settings → Secrets and variables → Actions
+
+필수 시크릿:
+- FLY_API_TOKEN: flyctl auth token
+```
+
+### 모니터링 및 로그
+
+```bash
+# Fly.io 로그 확인
+flyctl logs -a recipe-backend
+flyctl logs -a recipe-ai
+
+# Cloudflare Pages 빌드 로그
+# Dashboard에서 확인
+
+# Neon.tech 쿼리 모니터링
+# Dashboard → Monitoring
+
+# Fly.io 앱 상태 확인
+flyctl status -a recipe-backend
+flyctl status -a recipe-ai
+
+# 메트릭 확인
+flyctl dashboard -a recipe-backend
+```
+
+### 비용 예상
+
+```
+┌──────────────────────────────────────────────────┐
+│         월별 예상 비용 (실제 사용량 기준)        │
+├──────────────────────────────────────────────────┤
+│                                                   │
+│  Cloudflare Pages:           $0                  │
+│  Cloudflare R2 (10GB):       $0                  │
+│  Cloudflare DNS:             $0                  │
+│  Neon.tech (500MB):          $0                  │
+│  Fly.io (2 apps, 최소):      $0 ~ $5             │
+│    - 무료 크레딧 범위 내                         │
+│    - 크레딧 소진 시 최대 $5/월                   │
+│                                                   │
+│  총 예상 비용:               $0 ~ $5/월 🎉       │
+│                                                   │
+│  ⚠️ 주의:                                        │
+│  - OpenAI API는 별도 과금 (사용량 기준)         │
+│  - 트래픽 급증 시 Fly.io 비용 증가 가능         │
+└──────────────────────────────────────────────────┘
+```
+
+### 스케일링 전략
+
+```bash
+# Fly.io 앱 스케일링 (필요 시)
+
+# 수평 스케일링 (인스턴스 추가)
+flyctl scale count 2 -a recipe-backend
+
+# 수직 스케일링 (메모리 증가)
+flyctl scale memory 512 -a recipe-backend
+
+# 리전 추가 (멀티 리전 배포)
+flyctl regions add nrt -a recipe-backend  # Tokyo
+flyctl regions add icn -a recipe-backend  # Seoul
+
+# 오토스케일링 설정 (fly.toml)
+[http_service]
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 1
+  max_machines_running = 3  # 최대 3개 인스턴스
+```
+
+### 백업 및 복구
+
+```bash
+# Neon.tech 자동 백업
+# - Point-in-time recovery (PITR) 7일 보관
+# - Dashboard에서 특정 시점으로 복구 가능
+
+# 수동 백업 (로컬)
+pg_dump $DATABASE_URL > backup-$(date +%Y%m%d).sql
+
+# 복구
+psql $DATABASE_URL < backup-20250117.sql
+
+# Fly.io 볼륨 백업 (스냅샷)
+flyctl volumes snapshots create <volume-id> -a recipe-backend
+```
+
+### 트러블슈팅
+
+#### 1. Cloudflare Pages 빌드 실패
+
+```bash
+# 원인: 모노레포 경로 문제
+# 해결: Build command에 cd 추가
+Build command: cd frontend && npm install && npm run build
+Build output directory: frontend/.next
+```
+
+#### 2. Fly.io 메모리 부족
+
+```bash
+# 증상: OOM (Out of Memory) 에러
+# 해결: 메모리 증가
+flyctl scale memory 512 -a recipe-backend
+```
+
+#### 3. Neon.tech 연결 타임아웃
+
+```bash
+# 증상: 첫 쿼리가 느림 (콜드 스타트)
+# 해결: Connection pooling 설정
+DATABASE_URL=postgresql://user:password@ep-xxx.neon.tech/recipe_platform?sslmode=require&pool_timeout=30
+
+# 또는 Prisma Accelerate / Neon Serverless Driver 사용
+```
+
+#### 4. CORS 오류
+
+```bash
+# main-service/src/main.ts
+app.enableCors({
+  origin: [
+    'https://recipe-platform.pages.dev',
+    'https://recipe-platform.com',
+    'https://www.recipe-platform.com',
+  ],
+  credentials: true,
+});
+```
+
+### 보안 체크리스트
+
+```
+✅ 모든 환경변수 Secrets로 관리
+✅ HTTPS 강제 적용 (Cloudflare + Fly.io)
+✅ CORS 올바르게 설정
+✅ JWT_SECRET 안전하게 생성 및 저장
+✅ Database SSL 연결 (sslmode=require)
+✅ API Rate Limiting 설정
+✅ Cloudflare WAF 활성화
+✅ 민감한 정보 .gitignore에 추가
+✅ TypeORM synchronize: false (production)
+```
+
+### 성능 최적화
+
+```
+✅ Cloudflare CDN 캐싱 활성화
+✅ Next.js 이미지 최적화 (next/image)
+✅ Database 인덱스 추가
+✅ API 응답 압축 (gzip)
+✅ Frontend 코드 스플리팅
+✅ Fly.io 리전을 사용자 가까이 배치
+✅ R2로 정적 자산 오프로드
+```
+
+---
+
+## 📝 배포 완료 확인
+
+배포가 완료되면 다음 URL에서 확인:
+
+```
+✅ Frontend: https://recipe-platform.pages.dev
+✅ Backend: https://recipe-backend.fly.dev/api
+✅ AI Service: https://recipe-ai.fly.dev/docs
+✅ Database: Neon.tech Dashboard에서 연결 확인
+```
+
+축하합니다! 🎉 프로덕션 배포 완료!
+
