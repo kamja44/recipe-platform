@@ -82,17 +82,17 @@ export function useIngredientRecommendation() {
   const handleSaveRecipe = (recipe: RecipeData) => {
     const createRecipeRequest = convertToCreateRecipeRequest(recipe);
     // 디버깅: 파싱된 데이터 확인
-    console.log("파싱된 레시피:", parsedRecipe);
-    console.log("재료:", parsedRecipe.ingredients);
-    console.log("조리법:", parsedRecipe.instructions);
+    console.log("파싱된 레시피:", createRecipeRequest);
+    console.log("재료:", createRecipeRequest.ingredients);
+    console.log("조리법:", createRecipeRequest.instructions);
 
     // 검증: 필수 필드 체크
-    if (parsedRecipe.ingredients.length === 0) {
+    if (createRecipeRequest.ingredients.length === 0) {
       alert("재료를 파싱할 수 없습니다. AI 응답 형식을 확인해주세요.");
       return;
     }
 
-    if (parsedRecipe.instructions.length === 0) {
+    if (createRecipeRequest.instructions.length === 0) {
       alert("조리법을 파싱할 수 없습니다. AI 응답 형식을 확인해주세요.");
       return;
     }

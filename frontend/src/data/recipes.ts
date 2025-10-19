@@ -2,7 +2,7 @@ import { RecipeListItem, RecipeDetail } from "@/types/common";
 
 export const recipeList: RecipeListItem[] = [
   {
-    id: "1",
+    id: 1,
     title: "감자 베이컨 볶음",
     description: "바삭한 베이컨과 고소한 감자의 환상적인 조합",
     image: "🥔",
@@ -12,7 +12,7 @@ export const recipeList: RecipeListItem[] = [
     category: "한식",
   },
   {
-    id: "2",
+    id: 2,
     title: "양파 감자 수프",
     description: "따뜻하고 진한 맛의 홈메이드 수프",
     image: "🍲",
@@ -22,7 +22,7 @@ export const recipeList: RecipeListItem[] = [
     category: "서양식",
   },
   {
-    id: "3",
+    id: 3,
     title: "치킨 샐러드",
     description: "신선한 채소와 부드러운 치킨의 헬시한 조합",
     image: "🥗",
@@ -33,9 +33,10 @@ export const recipeList: RecipeListItem[] = [
   },
 ];
 
-export const recipeDetails: Record<string, RecipeDetail> = {
-  "1": {
+export const recipeDetails: Record<number, RecipeDetail> = {
+  1: {
     ...recipeList[0],
+    userId: null,
     ingredients: [
       "감자 2개 (중간 크기)",
       "베이컨 4줄",
@@ -66,8 +67,9 @@ export const recipeDetails: Record<string, RecipeDetail> = {
       fat: 16,
     },
   },
-  "2": {
+  2: {
     ...recipeList[1],
+    userId: null,
     ingredients: [
       "양파 2개 (큰 것)",
       "감자 3개",
@@ -100,6 +102,6 @@ export const recipeDetails: Record<string, RecipeDetail> = {
   },
 };
 
-export const getRecipeById = (id: string): RecipeDetail | null => {
+export const getRecipeById = (id: number): RecipeDetail | null => {
   return recipeDetails[id] || null;
 };
