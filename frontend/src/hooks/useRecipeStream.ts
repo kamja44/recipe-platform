@@ -20,7 +20,9 @@ export function useRecipeStream() {
     setError(null);
 
     const eventSource = new EventSource(
-      `http://localhost:3001/recipes/generate-ai-stream?` +
+      `${
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+      }/recipes/generate-ai-stream?` +
         new URLSearchParams({
           ingredients: JSON.stringify(ingredients),
           preferences: preferences || "",
