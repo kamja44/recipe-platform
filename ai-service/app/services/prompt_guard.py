@@ -52,15 +52,6 @@ class PromptGuard:
         r"(계좌|은행|개인키|private)",
     ]
 
-    # 허용된 재료 관련 키워드 (화이트리스트)
-    ALLOWED_FOOD_KEYWORDS = [
-        "맛있는", "건강한", "빠른", "간단한", "쉬운",
-        "매운", "달콤한", "고소한", "담백한",
-        "한식", "중식", "일식", "양식", "디저트",
-        "다이어트", "저칼로리", "고단백",
-        "채식", "비건", "할랄",
-    ]
-
     @classmethod
     def detect_language(cls, text: str) -> str:
         """
