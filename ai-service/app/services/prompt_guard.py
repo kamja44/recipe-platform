@@ -7,28 +7,49 @@ from typing import List
 class PromptGuard:
     """프롬프트 인젝션 공격 방어"""
 
-    # 위험한 패턴 탐지
+    # 위험한 패턴 탐지 (영어 + 한국어)
     DANGEROUS_PATTERNS = [
-        # 역할/명령 무시 시도
+        # 역할/명령 무시 시도 (영어)
         r"(?i)(ignore|forget|disregard).*(previous|above|instruction|prompt|system)",
         r"(?i)you are (now|a) (new|different)",
         r"(?i)act as",
         r"(?i)pretend (you|to be)",
         r"(?i)roleplay",
 
-        # 시스템 프롬프트 추출 시도
+        # 역할/명령 무시 시도 (한국어)
+        r"(이전|위|앞).*(지시|명령|프롬프트|시스템|내용).*(무시|잊|버려|삭제)",
+        r"(무시|잊어버려|잊고).*(이전|위|앞|모든).*(지시|명령|instruction)",
+        r"너는 (이제|지금부터|앞으로) (새로운|다른|해커|범죄자)",
+        r"(역할극|롤플레이|연기)",
+        r"~인 척",
+
+        # 시스템 프롬프트 추출 시도 (영어)
         r"(?i)(show|tell|give).*(system|prompt|instruction)",
         r"(?i)what (is|are) your (instruction|prompt|rule)",
         r"(?i)repeat.*(above|previous)",
 
-        # 유해 콘텐츠 생성 시도
+        # 시스템 프롬프트 추출 시도 (한국어)
+        r"(보여줘|알려줘|출력|반복).*(시스템|프롬프트|지시|명령)",
+        r"(시스템|프롬프트).*(뭐야|무엇|어떻게)",
+        r"(이전|위).*(대화|내용|말).*(반복|다시)",
+
+        # 유해 콘텐츠 생성 시도 (영어)
         r"(?i)(bomb|weapon|drug|hack|exploit)",
         r"(?i)(kill|murder|suicide|harm)",
         r"(?i)(sexual|porn|nude)",
 
-        # 개인정보/민감정보 요청
+        # 유해 콘텐츠 생성 시도 (한국어)
+        r"(폭탄|무기|총|칼|마약|해킹|크랙)",
+        r"(죽이|살인|자살|해치|상해)",
+        r"(성적|음란|야동|포르노|누드)",
+
+        # 개인정보/민감정보 요청 (영어)
         r"(?i)(password|credit card|ssn|personal)",
         r"(?i)(bank|account|private key)",
+
+        # 개인정보/민감정보 요청 (한국어)
+        r"(비밀번호|패스워드|주민번호|카드번호)",
+        r"(계좌|은행|개인키|private)",
     ]
 
     # 허용된 재료 관련 키워드 (화이트리스트)
