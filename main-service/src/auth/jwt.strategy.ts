@@ -11,10 +11,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     configService: ConfigService,
     private authService: AuthService,
   ) {
+    const jwtSecret = configService.get<string>('jwt.secret');
+
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET is not defined in environment variables');
+    }
+
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(), // Bearer 토큰에서추출
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(), // Bearer 토큰에서 추출
       ignoreExpiration: false, // 만료된 토큰 거부
-      secretOrKey: configService.get<string>('jwt.secret') || 'fallback-secret', // JWT 시크릿 키
+      secretOrKey: jwtSecret, // JWT 시크릿 키 (fallback 제거)
     });
   }
 
