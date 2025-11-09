@@ -62,9 +62,60 @@ class PromptGuard:
     ]
 
     @classmethod
+    def detect_language(cls, text: str) -> str:
+        """
+        텍스트 언어 감지
+
+        Returns:
+            "ko" (한국어), "en" (영어), "cjk" (중일), "unknown"
+        """
+        if not text:
+            return "unknown"
+
+        # 각 언어별 문자 개수 카운트
+        korean_chars = len(re.findall(r'[가-힣]', text))
+        english_chars = len(re.findall(r'[a-zA-Z]', text))
+        # 중국어/일본어 한자 (CJK Unified Ideographs + 히라가나 + 가타카나)
+        cjk_chars = len(re.findall(r'[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff]', text))
+
+        total_chars = korean_chars + english_chars + cjk_chars
+
+        if total_chars == 0:
+            return "unknown"
+
+        # CJK 문자가 30% 이상이면 중국어/일본어로 판단
+        if cjk_chars / total_chars > 0.3:
+            return "cjk"
+        # 한글이 30% 이상이면 한국어
+        elif korean_chars / total_chars > 0.3:
+            return "ko"
+        # 영어가 50% 이상이면 영어
+        elif english_chars / total_chars > 0.5:
+            return "en"
+        else:
+            return "unknown"
+
+    @classmethod
+    def is_allowed_language(cls, text: str) -> tuple[bool, str]:
+        """
+        허용된 언어인지 검증 (한국어, 영어만 허용)
+
+        Returns:
+            (is_allowed: bool, reason: str)
+        """
+        lang = cls.detect_language(text)
+
+        if lang in ["ko", "en"]:
+            return True, ""
+        elif lang == "cjk":
+            return False, "중국어/일본어는 지원하지 않습니다"
+        else:
+            return True, ""  # unknown은 허용 (숫자, 특수문자만 있는 경우)
+
+    @classmethod
     def is_safe_input(cls, text: str) -> tuple[bool, str]:
         """
-        입력이 안전한지 검증
+        다단계 입력 검증 (언어 화이트리스트 + 패턴 매칭)
 
         Returns:
             (is_safe: bool, reason: str)
@@ -72,16 +123,21 @@ class PromptGuard:
         if not text or not text.strip():
             return True, ""
 
-        # 1. 위험한 패턴 탐지
+        # 1. 언어 화이트리스트 검증 (한국어, 영어만 허용)
+        is_allowed, reason = cls.is_allowed_language(text)
+        if not is_allowed:
+            return False, reason
+
+        # 2. 위험한 패턴 탐지 (정규표현식)
         for pattern in cls.DANGEROUS_PATTERNS:
             if re.search(pattern, text):
                 return False, "유해한 내용이 감지되었습니다"
 
-        # 2. 길이 제한 (DoS 방지)
+        # 3. 길이 제한 (DoS 방지)
         if len(text) > 500:
             return False, "입력이 너무 깁니다 (최대 500자)"
 
-        # 3. 특수문자 과다 사용 탐지
+        # 4. 특수문자 과다 사용 탐지
         special_chars = re.findall(r'[^a-zA-Z0-9가-힣\s,.]', text)
         if len(special_chars) > len(text) * 0.3:
             return False, "특수문자가 과도하게 포함되어 있습니다"
