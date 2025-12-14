@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { useRecipeStream } from "@/hooks/useRecipeStream";
+import { useIngredientInput } from "@/hooks/useIngredientInput";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { createRecipe } from "@/lib/api/recipes";
@@ -17,10 +18,18 @@ import { useAuth } from "@/hooks/useAuth";
 export default function RecommendPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const [ingredients, setIngredients] = useState<string[]>([]);
-  const [currentIngredient, setCurrentIngredient] = useState("");
   const [preferences, setPreferences] = useState("");
   const { recipe, isStreaming, error, generateRecipe } = useRecipeStream();
+
+  // 재료 입력 관리 (커스텀 훅으로 분리)
+  const {
+    ingredients,
+    currentIngredient,
+    setCurrentIngredient,
+    addIngredient,
+    removeIngredient,
+    handleKeyPress,
+  } = useIngredientInput();
 
   // 레시피 저장 mutation
   const { mutate: saveRecipe, isPending: isSaving } = useMutation({
@@ -37,20 +46,6 @@ export default function RecommendPage() {
       );
     },
   });
-
-  const addIngredient = () => {
-    if (
-      currentIngredient.trim() &&
-      !ingredients.includes(currentIngredient.trim())
-    ) {
-      setIngredients([...ingredients, currentIngredient.trim()]);
-      setCurrentIngredient("");
-    }
-  };
-
-  const removeIngredient = (ingredient: string) => {
-    setIngredients(ingredients.filter((i) => i !== ingredient));
-  };
 
   const handleRecommend = () => {
     if (ingredients.length > 0) {
@@ -96,11 +91,6 @@ export default function RecommendPage() {
     });
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      addIngredient();
-    }
-  };
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       <div className="text-center mb-12">
