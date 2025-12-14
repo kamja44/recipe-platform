@@ -294,6 +294,245 @@ export function useCreateReview(recipeId: number) {
 
 ---
 
+## 🧪 테스트 전략
+
+### 왜 Vitest를 선택했나?
+
+**Vitest**는 Vite 기반의 차세대 테스트 프레임워크로, 다음과 같은 이유로 선택했습니다:
+
+| 비교 항목 | Jest | Vitest | 선택 이유 |
+|-----------|------|--------|-----------|
+| **속도** | 느림 (변환 필요) | 빠름 (네이티브 ESM) | ⚡ **10배 빠른 테스트 실행** |
+| **설정** | 복잡 (Babel, ts-jest) | 간단 (Vite 설정 재사용) | 🎯 **제로 설정에 가까움** |
+| **HMR** | 없음 | 있음 | 🔥 **테스트 파일 변경 시 즉시 재실행** |
+| **Next.js 호환** | 공식 지원 | 호환 | ✅ **동일한 환경 보장** |
+| **TypeScript** | 변환 필요 | 네이티브 지원 | 📘 **타입 안전성 + 속도** |
+| **UI 도구** | 없음 | Vitest UI 내장 | 🎨 **시각적 테스트 러너** |
+
+**핵심 선택 이유:**
+1. **속도**: ESM 네이티브 지원으로 테스트 실행 속도가 10배 이상 빠름
+2. **DX (Developer Experience)**: Vite 설정을 그대로 재사용하여 설정 복잡도 최소화
+3. **Hot Module Replacement**: 테스트 파일 변경 시 즉시 재실행되어 생산성 향상
+4. **타입 안전성**: TypeScript를 네이티브로 지원하여 변환 과정 불필요
+5. **Vitest UI**: 브라우저 기반 UI로 테스트 결과를 시각적으로 확인 가능
+
+---
+
+### 테스트 구조
+
+```
+frontend/src/
+├── hooks/
+│   ├── useRecipes.test.ts         # Custom Hook 테스트
+│   ├── useReviews.test.ts         # CRUD Hook 테스트
+│   └── useRecipeStream.test.ts    # SSE 스트리밍 테스트
+│
+├── components/
+│   ├── auth/
+│   │   └── LoginForm.test.tsx     # 폼 검증 테스트
+│   ├── cards/
+│   │   └── RecipeCard.test.tsx    # UI 렌더링 테스트
+│   └── review/
+│       └── ReviewForm.test.tsx    # 리뷰 작성 테스트
+│
+├── lib/api/
+│   └── recipes.test.ts            # API 클라이언트 테스트
+│
+└── test/
+    ├── setup.ts                   # 전역 설정
+    ├── testUtils.tsx              # 테스트 유틸리티
+    └── mockData.ts                # 공통 Mock 데이터
+```
+
+---
+
+### 테스트 커버리지
+
+| 계층 | 테스트 대상 | 커버리지 목표 | 현재 상태 |
+|------|-------------|---------------|-----------|
+| **Custom Hooks** | useRecipes, useReviews, useRecipeStream | 80% | ✅ 완료 |
+| **Components** | LoginForm, ReviewForm, RecipeCard | 70% | ✅ 완료 |
+| **API Client** | recipes.ts CRUD 함수 | 80% | ✅ 완료 |
+| **전체** | 전체 프론트엔드 코드 | 60% 이상 | 🎯 목표 달성 |
+
+---
+
+### 테스트 실행 명령어
+
+```bash
+# 테스트 실행
+npm run test
+
+# Watch 모드 (파일 변경 시 자동 재실행)
+npm run test -- --watch
+
+# UI 모드 (브라우저에서 시각적으로 확인)
+npm run test:ui
+
+# 커버리지 리포트
+npm run test:coverage
+```
+
+---
+
+### 주요 테스트 케이스
+
+#### 1. Custom Hooks 테스트 (useRecipes.test.ts)
+
+```typescript
+describe("useRecipes", () => {
+  it("should fetch recipes with pagination", async () => {
+    // TanStack Query 캐싱 동작 검증
+    const { result } = renderHook(() => useRecipes(1, 10));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+  });
+
+  it("should cache data with correct queryKey", async () => {
+    // 동일 파라미터로 두 번 호출 시 API는 한 번만 호출
+    expect(recipeApi.getRecipes).toHaveBeenCalledTimes(1);
+  });
+});
+```
+
+**검증 항목:**
+- ✅ API 호출 성공 시 데이터 반환
+- ✅ 검색어/카테고리 필터링 동작
+- ✅ TanStack Query 캐싱 동작
+- ✅ 에러 핸들링
+
+---
+
+#### 2. Component 테스트 (LoginForm.test.tsx)
+
+```typescript
+describe("LoginForm", () => {
+  it("should validate email format", async () => {
+    // React Hook Form 유효성 검증 동작 확인
+    await user.type(emailInput, "invalid-email");
+    await user.click(submitButton);
+    expect(screen.getByText("올바른 이메일 형식이 아닙니다")).toBeInTheDocument();
+  });
+
+  it("should call onSuccess with validated data", async () => {
+    // 비즈니스 로직 분리 검증 (콜백 패턴)
+    await user.type(emailInput, "test@example.com");
+    await user.click(submitButton);
+    expect(mockOnSuccess).toHaveBeenCalledWith({
+      email: "test@example.com",
+      password: "password123"
+    });
+  });
+});
+```
+
+**검증 항목:**
+- ✅ React Hook Form 유효성 검증
+- ✅ 비즈니스/UI 로직 분리 (콜백 패턴)
+- ✅ 로딩 상태 UI 처리
+- ✅ 사용자 인터랙션 (userEvent)
+
+---
+
+#### 3. API Client 테스트 (recipes.test.ts)
+
+```typescript
+describe("Recipe API", () => {
+  it("should fetch recipes with search query", async () => {
+    // API 클라이언트가 올바른 URL로 호출하는지 검증
+    await getRecipes(1, 10, "토마토");
+    expect(apiClient.get).toHaveBeenCalledWith(
+      `/recipes/search/ingredient?q=${encodeURIComponent("토마토")}`,
+      { params: { page: 1, limit: 10 } }
+    );
+  });
+});
+```
+
+**검증 항목:**
+- ✅ 올바른 엔드포인트 호출
+- ✅ Query Parameter 전달
+- ✅ 에러 처리 (404, 401 등)
+- ✅ 응답 데이터 변환
+
+---
+
+### 테스트 모범 사례
+
+#### 1. Given-When-Then 패턴
+
+```typescript
+it("should create review successfully", async () => {
+  // Given: 테스트 준비 (데이터, Mock 설정)
+  const newReview = { rating: 5, comment: "정말 맛있어요!" };
+  vi.mocked(reviewApi.createReview).mockResolvedValue(mockReview);
+
+  // When: 테스트 실행 (함수 호출, 이벤트 트리거)
+  const { result } = renderHook(() => useCreateReview(1));
+  result.current.mutate(newReview);
+
+  // Then: 결과 검증 (기대값과 실제값 비교)
+  await waitFor(() => expect(result.current.isSuccess).toBe(true));
+});
+```
+
+#### 2. Mock Data 중앙 관리
+
+모든 테스트에서 동일한 Mock 데이터를 사용하여 일관성을 보장합니다.
+
+```typescript
+// src/test/mockData.ts
+export const mockRecipe = {
+  id: 1,
+  title: "토마토 파스타",
+  category: "양식",
+  // ...
+};
+```
+
+#### 3. Custom Render Function
+
+TanStack Query Provider를 자동으로 래핑하는 유틸리티 함수:
+
+```typescript
+// src/test/testUtils.tsx
+export function render(ui: ReactElement) {
+  const queryClient = new QueryClient();
+  return rtlRender(
+    <QueryClientProvider client={queryClient}>
+      {ui}
+    </QueryClientProvider>
+  );
+}
+```
+
+---
+
+### CI/CD 통합 (향후 계획)
+
+```yaml
+# .github/workflows/test.yml
+name: Test
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+      - run: npm ci
+      - run: npm run test:coverage
+      - run: npm run lint
+```
+
+**목표:**
+- ✅ PR 생성 시 자동 테스트 실행
+- ✅ 커버리지 60% 미만 시 PR 차단
+- ✅ ESLint 에러 시 PR 차단
+
+---
+
 ## 🚀 주요 기능
 
 ### ✅ 구현 완료
