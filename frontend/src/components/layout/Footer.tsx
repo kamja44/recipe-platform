@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export function Footer() {
   return (
     <footer className="border-t bg-background">
@@ -25,12 +27,12 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a
+                <Link
                   href="/recipes"
                   className="hover:text-foreground transition-colors"
                 >
                   레시피 모음
-                </a>
+                </Link>
               </li>
               <li>
                 <a

@@ -21,7 +21,7 @@ export function Pagination({
     const maxVisible = 5; // 최대 보여줄 페이지 버튼 수
 
     let start = Math.max(1, currentPage - 2);
-    let end = Math.min(totalPages, start + maxVisible - 1);
+    const end = Math.min(totalPages, start + maxVisible - 1);
 
     // 끝에서 부족한 경우 start 조정
     if (end - start < maxVisible - 1) {
