@@ -22,7 +22,7 @@ export function RecipeCard({
   const cardContent = (
     <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
       <CardHeader>
-        <div className="text-6xl text-center mb-4">{recipe.image}</div>
+        <div className="text-6xl text-center mb-4">{recipe.image || "🍳"}</div>
         <CardTitle className="text-xl">{recipe.title}</CardTitle>
         <CardDescription>{recipe.description}</CardDescription>
       </CardHeader>

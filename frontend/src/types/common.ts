@@ -43,11 +43,11 @@ export interface RecipeListItem {
   id: number;
   title: string;
   description: string;
-  image: string;
-  cookTime: number;
-  servings: number;
-  difficulty: string;
-  category: string;
+  image?: string;
+  cookTime?: number;
+  servings?: number;
+  difficulty?: string;
+  category?: string;
 }
 
 export interface RecipeDetail extends RecipeListItem {

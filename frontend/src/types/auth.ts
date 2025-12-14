@@ -9,3 +9,10 @@ export interface SignupFormData {
   password: string;
   confirmPassword: string;
 }
+
+export interface User {
+  id: number;
+  email: string;
+  username: string;
+  createdAt: string;
+}

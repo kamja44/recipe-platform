@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface RecipeIngredientsProps {
   ingredients: string[];
-  servings: number;
+  servings?: number;
 }
 
 export function RecipeIngredients({

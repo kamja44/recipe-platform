@@ -97,7 +97,7 @@ export default function RecipeEditPage() {
         instructions: recipe.instructions.join("\n"),
         cookTime: recipe.cookTime,
         servings: recipe.servings,
-        difficulty: difficultyToEn(recipe.difficulty),
+        difficulty: difficultyToEn(recipe.difficulty || "쉬움"),
         category: recipe.category,
       });
     }
